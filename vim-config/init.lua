@@ -4,6 +4,21 @@ vim.o.mouse = "a"
 vim.g.loaded_perl_provider = 0
 vim.o.termguicolors = true
 vim.o.showtabline = 2
+vim.g.mapleader = " "
+
+vim.diagnostic.config({
+  virtual_text = true,  -- show inline errors
+  signs = true,         -- show signs in gutter
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,
+})
+
+vim.api.nvim_create_user_command("Reload", function()
+  vim.cmd("source $MYVIMRC")   -- Reload init.lua
+  vim.cmd("edit")              -- Reload current buffer
+  vim.notify("🔁 Neovim config reloaded!", vim.log.levels.INFO)
+end, {})
 
 -- Bootstrap lazy.nvim if not installed
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -57,6 +72,37 @@ require("lazy").setup({
   end,
 },
 
+-- Bottom widgets branch, time and more...
+{
+  "nvim-lualine/lualine.nvim",
+  dependencies = { "nvim-tree/nvim-web-devicons" },
+  config = function()
+    require("lualine").setup({
+      options = {
+        theme = "auto",
+        section_separators = "",
+        component_separators = "",
+      },
+      sections = {
+        lualine_a = { "mode" },
+        lualine_b = { "branch" },             
+        lualine_c = { "filename" },
+        lualine_x = {
+          "encoding",
+          "fileformat",
+          "filetype",
+          {
+            function()
+              return os.date("%H:%M:%S")  
+            end,
+          },
+        },
+        lualine_y = { "progress" },
+        lualine_z = { "location" },
+      },
+    })
+  end,
+},
 
   -- File explorer
   {
@@ -159,22 +205,28 @@ require("lazy").setup({
     config = function()
       local lspconfig = require("lspconfig")
 
-      lspconfig.tsserver.setup({
-on_attach = function(_, bufnr)
-  local opts = { noremap = true, silent = true, buffer = bufnr }
-  vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-  vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+      -- CSS/SCSS LSP
+      lspconfig.cssls.setup({
+        capabilities = require("cmp_nvim_lsp").default_capabilities(),
+      })
 
-  -- Alt+i to apply code actions like missing import
-  vim.keymap.set("n", "<A-i>", function()
-    vim.lsp.buf.code_action({
-      context = {
-        only = { "quickfix", "source.fixAll", "source.organizeImports", "source.addMissingImports.ts" },
-      },
-      apply = true,
-    })
-  end, opts)
-end,
+      -- Typescript setup
+      lspconfig.tsserver.setup({
+        on_attach = function(_, bufnr)
+          local opts = { noremap = true, silent = true, buffer = bufnr }
+          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+
+          -- Alt+i to apply code actions like missing import
+          vim.keymap.set("n", "<A-i>", function()
+            vim.lsp.buf.code_action({
+              context = {
+                only = { "quickfix", "source.fixAll", "source.organizeImports", "source.addMissingImports.ts" },
+              },
+              apply = true,
+            })
+          end, opts)
+        end,
       })
 
       lspconfig.jsonls.setup({})
@@ -210,13 +262,39 @@ end,
 
   -- Telescope fuzzy finder
   {
-    "nvim-telescope/telescope.nvim",
-    tag = "0.1.5",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    config = function()
-      require("telescope").setup()
-      vim.keymap.set("n", "<leader>f", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true })
-    end,
+  "nvim-telescope/telescope.nvim",
+  tag = "0.1.5",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  config = function()
+    require("telescope").setup({
+      defaults = {
+        file_ignore_patterns = {
+          "node_modules/",
+          "%.git/",
+          "build/",
+          "dist/"
+        },
+        vimgrep_arguments = {
+          "rg",
+          "--color=never",
+          "--no-heading",
+          "--with-filename",
+          "--line-number",
+          "--column",
+          "--smart-case",
+          "--glob=!node_modules/**", -- ignore node_modules
+        },
+      },
+      pickers = {
+        find_files = {
+          hidden = true,
+          no_ignore = false, -- use .gitignore
+        }
+      }
+    })
+
+    vim.keymap.set("n", "<leader>f", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true })
+  end,
   },
 
 -- Toggle terminal with <leader>t
@@ -266,31 +344,66 @@ end,
 })
 
 -- Global keymaps
+-- Toggle open file tree
 vim.keymap.set("n", "<D-e>", function()
   vim.cmd("NvimTreeToggle")
 end, { noremap = true, silent = true })
 
+-- Open find file popup
 vim.keymap.set("n", "<D-f>", function()
   require("telescope.builtin").find_files()
 end, { noremap = true, silent = true })
 
-vim.keymap.set({ "n", "i" }, "<D-s>", function()
-  vim.cmd("stopinsert")
-  vim.lsp.buf.format({ async = true })
-  vim.cmd("silent! wall!")
+-- Import auto modules
+vim.keymap.set("n", "<leader>i", function()
   vim.lsp.buf.code_action({
-    context = { only = { "source.fixAll.eslint" }, diagnostics = {} },
+    context = {
+      only = { "source.addMissingImports.ts" },
+    },
     apply = true,
   })
 end, { noremap = true, silent = true })
 
-vim.keymap.set("n", "<D-t>", function()
-  vim.cmd("ToggleTerm direction=float")
+-- Open terminal
+local sysname = vim.loop.os_uname().sysname
+local shell
+
+if sysname == "Windows_NT" then
+  -- Use PowerShell with sane defaults
+  shell = "powershell.exe"
+else
+  -- macOS or Linux
+  shell = "/bin/bash"
+end
+
+require("toggleterm").setup({
+  direction = "float",
+  open_mapping = [[<leader>t]],
+  float_opts = {
+    border = "curved",
+  },
+  shell = shell,
+})
+
+-- Undo and rendu
+vim.keymap.set("n", "<leader><Left>", "u", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader><Right>", "<C-r>", { noremap = true, silent = true })
+
+-- Toggle switch file tab
+vim.keymap.set("n", "<leader>p", "<C-^>", { noremap = true, silent = true })
+
+-- Save files
+vim.keymap.set("n", "<leader>s", function()
+  vim.cmd("write!")  -- <-- force save
+
+  local diagnostics = vim.diagnostic.get(0)
+  if diagnostics and #diagnostics > 0 then
+    vim.defer_fn(function()
+      vim.diagnostic.open_float(nil, { focus = false })
+    end, 100)
+  end
 end, { noremap = true, silent = true })
 
-vim.keymap.set("n", "<D-Left>", "u", { noremap = true, silent = true })
-vim.keymap.set("n", "<D-Right>", "<C-r>", { noremap = true, silent = true })
-vim.keymap.set("n", "<D-p>", "<C-^>", { noremap = true, silent = true })
 
 vim.keymap.set("n", "<D-i>", function()
   vim.lsp.buf.code_action({
@@ -301,12 +414,20 @@ vim.keymap.set("n", "<D-i>", function()
   })
 end, { noremap = true, silent = true })
 
+-- Find file inner file
+vim.keymap.set("n", "<leader>l", function()
+  require("telescope.builtin").current_buffer_fuzzy_find()
+end, { noremap = true, silent = true })
+
+-- Split files
+vim.keymap.set("n", "<leader>c", function()
+  local current = vim.api.nvim_buf_get_name(0)
+  vim.cmd("b#")         -- switch to previous buffer
+  vim.cmd("vsplit " .. current) -- open the original file in vertical split
+end, { noremap = true, silent = true })
+
+-- Toggle navigate splited files
+vim.keymap.set("n", "<leader><Up>", "<C-w>w", { noremap = true, silent = true })
+
 vim.keymap.set("n", "<D-,>", "<cmd>BufferLineCyclePrev<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<D-.>", "<cmd>BufferLineCycleNext<CR>", { noremap = true, silent = true })
-
-
-
-
-
-
-
