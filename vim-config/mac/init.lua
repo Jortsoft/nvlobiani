@@ -403,5 +403,10 @@ vim.keymap.set("n", "<D-i>", function()
   })
 end, { noremap = true, silent = true })
 
+-- Find file inner file
+vim.keymap.set("n", "<leader>l", function()
+  require("telescope.builtin").current_buffer_fuzzy_find()
+end, { noremap = true, silent = true })
+
 vim.keymap.set("n", "<D-,>", "<cmd>BufferLineCyclePrev<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<D-.>", "<cmd>BufferLineCycleNext<CR>", { noremap = true, silent = true })
