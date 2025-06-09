@@ -211,13 +211,39 @@ end,
 
   -- Telescope fuzzy finder
   {
-    "nvim-telescope/telescope.nvim",
-    tag = "0.1.5",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    config = function()
-      require("telescope").setup()
-      vim.keymap.set("n", "<leader>f", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true })
-    end,
+  "nvim-telescope/telescope.nvim",
+  tag = "0.1.5",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  config = function()
+    require("telescope").setup({
+      defaults = {
+        file_ignore_patterns = {
+          "node_modules/",
+          "%.git/",
+          "build/",
+          "dist/"
+        },
+        vimgrep_arguments = {
+          "rg",
+          "--color=never",
+          "--no-heading",
+          "--with-filename",
+          "--line-number",
+          "--column",
+          "--smart-case",
+          "--glob=!node_modules/**", -- ignore node_modules
+        },
+      },
+      pickers = {
+        find_files = {
+          hidden = true,
+          no_ignore = false, -- use .gitignore
+        }
+      }
+    })
+
+    vim.keymap.set("n", "<leader>f", "<cmd>Telescope find_files<CR>", { noremap = true, silent = true })
+  end,
   },
 
 -- Toggle terminal with <leader>t
@@ -289,8 +315,9 @@ vim.keymap.set("n", "<D-t>", function()
   vim.cmd("ToggleTerm direction=float")
 end, { noremap = true, silent = true })
 
-vim.keymap.set("n", "<D-Left>", "u", { noremap = true, silent = true })
-vim.keymap.set("n", "<D-Right>", "<C-r>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader><Left>", "u", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader><Right>", "<C-r>", { noremap = true, silent = true })
+
 vim.keymap.set("n", "<D-p>", "<C-^>", { noremap = true, silent = true })
 
 vim.keymap.set("n", "<D-i>", function()
