@@ -4,6 +4,7 @@ vim.o.mouse = "a"
 vim.g.loaded_perl_provider = 0
 vim.o.termguicolors = true
 vim.o.showtabline = 2
+vim.g.mapleader = " "
 
 -- Bootstrap lazy.nvim if not installed
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -303,10 +304,3 @@ end, { noremap = true, silent = true })
 
 vim.keymap.set("n", "<D-,>", "<cmd>BufferLineCyclePrev<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<D-.>", "<cmd>BufferLineCycleNext<CR>", { noremap = true, silent = true })
-
-
-
-
-
-
-
