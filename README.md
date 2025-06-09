@@ -14,6 +14,7 @@
 | 🔄 Switch files       | `<leader>space + P`                    |
 | 📦 Import module      | `<leader>space + I`                    |
 | 💻 Open Terminal      | `<leader>space + T`                    |
+| 👀 Find word in file  | `<leader>space + L`                    |
 | ↩️ Undo               | `<leader>space + ←`                     |
 | ↪️ Redo               | `<leader>space + →`                     |
 
