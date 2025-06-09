@@ -205,22 +205,28 @@ require("lazy").setup({
     config = function()
       local lspconfig = require("lspconfig")
 
-      lspconfig.tsserver.setup({
-on_attach = function(_, bufnr)
-  local opts = { noremap = true, silent = true, buffer = bufnr }
-  vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-  vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+      -- CSS/SCSS LSP
+      lspconfig.cssls.setup({
+        capabilities = require("cmp_nvim_lsp").default_capabilities(),
+      })
 
-  -- Alt+i to apply code actions like missing import
-  vim.keymap.set("n", "<A-i>", function()
-    vim.lsp.buf.code_action({
-      context = {
-        only = { "quickfix", "source.fixAll", "source.organizeImports", "source.addMissingImports.ts" },
-      },
-      apply = true,
-    })
-  end, opts)
-end,
+      -- Typescript setup
+      lspconfig.tsserver.setup({
+        on_attach = function(_, bufnr)
+          local opts = { noremap = true, silent = true, buffer = bufnr }
+          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+
+          -- Alt+i to apply code actions like missing import
+          vim.keymap.set("n", "<A-i>", function()
+            vim.lsp.buf.code_action({
+              context = {
+                only = { "quickfix", "source.fixAll", "source.organizeImports", "source.addMissingImports.ts" },
+              },
+              apply = true,
+            })
+          end, opts)
+        end,
       })
 
       lspconfig.jsonls.setup({})
