@@ -6,6 +6,20 @@ vim.o.termguicolors = true
 vim.o.showtabline = 2
 vim.g.mapleader = " "
 
+vim.diagnostic.config({
+  virtual_text = true,  -- show inline errors
+  signs = true,         -- show signs in gutter
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,
+})
+
+vim.api.nvim_create_user_command("Reload", function()
+  vim.cmd("source $MYVIMRC")   -- Reload init.lua
+  vim.cmd("edit")              -- Reload current buffer
+  vim.notify("🔁 Neovim config reloaded!", vim.log.levels.INFO)
+end, {})
+
 -- Bootstrap lazy.nvim if not installed
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
@@ -58,6 +72,37 @@ require("lazy").setup({
   end,
 },
 
+-- Bottom widgets branch, time and more...
+{
+  "nvim-lualine/lualine.nvim",
+  dependencies = { "nvim-tree/nvim-web-devicons" },
+  config = function()
+    require("lualine").setup({
+      options = {
+        theme = "auto",
+        section_separators = "",
+        component_separators = "",
+      },
+      sections = {
+        lualine_a = { "mode" },
+        lualine_b = { "branch" },             
+        lualine_c = { "filename" },
+        lualine_x = {
+          "encoding",
+          "fileformat",
+          "filetype",
+          {
+            function()
+              return os.date("%H:%M:%S")  
+            end,
+          },
+        },
+        lualine_y = { "progress" },
+        lualine_z = { "location" },
+      },
+    })
+  end,
+},
 
   -- File explorer
   {
@@ -293,32 +338,55 @@ end,
 })
 
 -- Global keymaps
+-- Toggle open file tree
 vim.keymap.set("n", "<D-e>", function()
   vim.cmd("NvimTreeToggle")
 end, { noremap = true, silent = true })
 
+-- Open find file popup
 vim.keymap.set("n", "<D-f>", function()
   require("telescope.builtin").find_files()
 end, { noremap = true, silent = true })
 
-vim.keymap.set({ "n", "i" }, "<D-s>", function()
-  vim.cmd("stopinsert")
-  vim.lsp.buf.format({ async = true })
-  vim.cmd("silent! wall!")
+-- Import auto modules
+vim.keymap.set("n", "<leader>i", function()
   vim.lsp.buf.code_action({
-    context = { only = { "source.fixAll.eslint" }, diagnostics = {} },
+    context = {
+      only = { "source.addMissingImports.ts" },
+    },
     apply = true,
   })
 end, { noremap = true, silent = true })
 
-vim.keymap.set("n", "<D-t>", function()
-  vim.cmd("ToggleTerm direction=float")
-end, { noremap = true, silent = true })
+-- Open terminal
+require("toggleterm").setup({
+  direction = "float",
+  open_mapping = [[<leader>t]],
+  float_opts = {
+    border = "curved",
+  },
+  shell = "/bin/bash", -- ← make sure Bash is used
+})
 
+-- Undo and rendu
 vim.keymap.set("n", "<leader><Left>", "u", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader><Right>", "<C-r>", { noremap = true, silent = true })
 
-vim.keymap.set("n", "<D-p>", "<C-^>", { noremap = true, silent = true })
+-- Toggle switch file tab
+vim.keymap.set("n", "<leader>p", "<C-^>", { noremap = true, silent = true })
+
+-- Save files
+vim.keymap.set("n", "<leader>s", function()
+  vim.cmd("write!")  -- <-- force save
+
+  local diagnostics = vim.diagnostic.get(0)
+  if diagnostics and #diagnostics > 0 then
+    vim.defer_fn(function()
+      vim.diagnostic.open_float(nil, { focus = false })
+    end, 100)
+  end
+end, { noremap = true, silent = true })
+
 
 vim.keymap.set("n", "<D-i>", function()
   vim.lsp.buf.code_action({
