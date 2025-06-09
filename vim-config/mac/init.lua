@@ -408,5 +408,15 @@ vim.keymap.set("n", "<leader>l", function()
   require("telescope.builtin").current_buffer_fuzzy_find()
 end, { noremap = true, silent = true })
 
+-- Split files
+vim.keymap.set("n", "<leader>c", function()
+  local current = vim.api.nvim_buf_get_name(0)
+  vim.cmd("b#")         -- switch to previous buffer
+  vim.cmd("vsplit " .. current) -- open the original file in vertical split
+end, { noremap = true, silent = true })
+
+-- Toggle navigate splited files
+vim.keymap.set("n", "<leader><Up>", "<C-w>w", { noremap = true, silent = true })
+
 vim.keymap.set("n", "<D-,>", "<cmd>BufferLineCyclePrev<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<D-.>", "<cmd>BufferLineCycleNext<CR>", { noremap = true, silent = true })
