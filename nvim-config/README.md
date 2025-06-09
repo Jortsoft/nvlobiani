@@ -15,6 +15,7 @@
 | 📦 Import module      | `<leader>space + I`                    |
 | 💻 Open Terminal      | `<leader>space + T`                    |
 | 👀 Find word in file  | `<leader>space + L`                    |
+| 🔪 Split file         | `<leader>space + C`                    |
 | 🔂 Toggle navigate file  | `<leader>space + ↑`                 |
 | ↩️ Undo               | `<leader>space + ←`                     |
 | ↪️ Redo               | `<leader>space + →`                     |
