@@ -13,6 +13,7 @@
 | 🔍 Find file          | `<leader>space + F`                    |
 | 🔄 Switch files       | `<leader>space + P`                    |
 | 📦 Import module      | `<leader>space + I`                    |
+| 💻 Open Terminal      | `<leader>space + T`                    |
 | ↩️ Undo               | `<leader>space + ←`                     |
 | ↪️ Redo               | `<leader>space + →`                     |
 
