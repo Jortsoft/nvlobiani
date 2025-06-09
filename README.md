@@ -17,6 +17,14 @@
 | ↩️ Undo               | `<leader>space + ←`                     |
 | ↪️ Redo               | `<leader>space + →`                     |
 
+## 🗓️ Commands
+
+| Action                | Command                                |
+|-----------------------|----------------------------------------|
+| ☾ Dark theme         | `:Theme dark`                           |
+| ☀️ Light theme        | `:Theme light`                          |
+| 🔄 Reload vim         | `:Reload`                               |
+
 
 # 📸 Screenshots
 
