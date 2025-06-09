@@ -6,10 +6,10 @@
 
 | Action                | Shortcut                              |
 |-----------------------|----------------------------------------|
-| 💾 Save file          | `<leader> + Alt/Command + S`          |
-| 📁 Toggle file tree   | `<leader> + Alt/Command + E`          |
-| 🔍 Find file          | `<leader> + Alt/Command + F`          |
-| 🔄 Switch files       | `<leader> + Alt/Command + P`          |
-| 📦 Import module      | `<leader> + Alt/Command + I`          |
-| ↩️ Undo               | `<leader> + Alt/Command + ←`          |
-| ↪️ Redo               | `<leader> + Alt/Command + →`          |
+| 💾 Save file          | `<leader> + space + S`                 |
+| 📁 Toggle file tree   | `<leader> + space + E`                 |
+| 🔍 Find file          | `<leader> + space + F`                 |
+| 🔄 Switch files       | `<leader> + space + P`                 |
+| 📦 Import module      | `<leader> + space + I`                 |
+| ↩️ Undo               | `<leader> + space + ←`                  |
+| ↪️ Redo               | `<leader> + space + →`                  |
