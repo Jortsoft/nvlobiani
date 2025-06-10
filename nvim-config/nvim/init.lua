@@ -111,7 +111,13 @@ require("lazy").setup({
     config = function()
       vim.g.loaded_netrw = 1
       vim.g.loaded_netrwPlugin = 1
-      require("nvim-tree").setup()
+      require("nvim-tree").setup({
+          update_focused_file = {
+          enable = true,
+          update_cwd = true,        -- Optional: also updates the working directory
+          ignore_list = {},         -- You can add patterns here to exclude certain files
+         },
+      })
       vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { noremap = true, silent = true })
     end,
   },
@@ -304,7 +310,6 @@ require("lazy").setup({
   config = function()
     require("toggleterm").setup({
       direction = "float", -- Other options: 'horizontal', 'vertical', 'tab'
-      open_mapping = [[<leader>t]],
       float_opts = {
         border = "curved",
       },
@@ -378,7 +383,6 @@ end
 
 require("toggleterm").setup({
   direction = "float",
-  open_mapping = [[<leader>t]],
   float_opts = {
     border = "curved",
   },
@@ -431,3 +435,12 @@ vim.keymap.set("n", "<leader><Up>", "<C-w>w", { noremap = true, silent = true })
 
 vim.keymap.set("n", "<D-,>", "<cmd>BufferLineCyclePrev<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<D-.>", "<cmd>BufferLineCycleNext<CR>", { noremap = true, silent = true })
+
+-- Esc exits terminal mode
+vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], { noremap = true })
+
+-- <leader>t toggles terminal from terminal mode
+vim.keymap.set("t", "<leader>t", [[<C-\><C-n><cmd>ToggleTerm<CR>]], { noremap = true, silent = true })
+
+-- <leader>t in normal mode (already exists)
+vim.keymap.set("n", "<leader>t", "<cmd>ToggleTerm<CR>", { noremap = true, silent = true })
