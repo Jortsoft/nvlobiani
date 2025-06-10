@@ -122,8 +122,8 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 
    
 ## 📦 First Launch
-Open Neovim:
-bashnvim
+Open Neovim:<br />
+<code>nvim</code>
 
 Wait for plugins to install:
 
