@@ -55,6 +55,8 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 - 🔄 Quick switching and splitting between files
 - 📦 Git-aware terminal + statusline with branch/time
 - ⚙️ Auto import/fix with
+- 🖥️ Integrated Terminal
+- ⚡ Fast Performance with Lazy.nvim plugin manager 
 
 
 # 📸 Screenshots
