@@ -77,22 +77,81 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
     Windows<br />
     Download from: https://github.com/neovim/neovim/releases
 
-3. Install Node LSP tools<br />
-   <code>npm install -g typescript typescript-language-server \ vscode-langservers-extracted @tailwindcss/language-server</code>
+2. Install Node.js<br/>
 
-4. Clone this config<br />
-   <code>git clone https://github.com/YOUR_USERNAME/nvim-config.git
-   mv nvim-config/nvim ~/.config/</code>
+    macOS<br />
+    <code>brew install neovim</code>
 
-    After installation, open NvLobiani<br />
-    <code>nvim .</code>
+    Windows<br />
+    Download from: https://nodejs.org/en/download
+
+4. Install git<br />
+
+    macOS<br />
+    <code>brew install git</code>
+
+    Windows<be />
+    Download from: https://git-scm.com/downloads
+
+5. Install a Nerd Font<br />
+   https://www.nerdfonts.com/font-downloads
+
+6. Clone NvLobiani<br />
+   MacOs<br />
+   Backup existing config (if any)<br />
+   <code>[ -d ~/.config/nvim ] && mv ~/.config/nvim ~/.config/nvim.backup</code>
+   
+   Clone the configuration<br />
+   <code>git clone https://github.com/Jortsoft/nvlobiani.git ~/.config/nvim</code>
+
+   Windows<br />
+   Backup existing config (if any)<br />
+   <code>if (Test-Path "$env:LOCALAPPDATA\nvim") {
+    Rename-Item "$env:LOCALAPPDATA\nvim" "$env:LOCALAPPDATA\nvim.backup"
+    }</code><br />
     
-    Press <b>shift + :</b> and type<br />
-    <code>:checkhealth</code>
-    
-    If your Vim is working correctly, you can install plugins.<br />
-    <code>:Lazy sync</code><br />
-    <code>:Lazy update</code>
+   Clone the configuration<br />
+   <code>git clone https://github.com/Jortsoft/nvlobiani.git "$env:LOCALAPPDATA\nvim"</code>
+
+7. Install LSP servers and formatters<br />
+   <code>npm install -g typescript-language-server</code>
+   <code>npm install -g vscode-langservers-extractedr</code>
+   <code>npm install -g prettier</code>
+
+   
+## 📦 First Launch
+Open Neovim:
+bashnvim
+
+Wait for plugins to install:
+
+Lazy.nvim will automatically install all plugins on first launch
+This may take a few minutes
+
+
+Restart Neovim:
+
+Close and reopen Neovim after plugins are installed
+
+
+Set up your terminal font:
+
+Configure your terminal to use a Nerd Font
+This ensures icons display correctly
+
+🤝 Contributing
+Feel free to submit issues and enhancement requests!
+📄 License
+This configuration is open source and available under the MIT License.
+
+Created by Jortsoft 🚀
+   
+
+
+   
+
+
+   
 
 
 
