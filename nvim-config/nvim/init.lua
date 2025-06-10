@@ -6,6 +6,11 @@ vim.o.termguicolors = true
 vim.o.showtabline = 2
 vim.g.mapleader = " "
 
+vim.schedule(function()
+  vim.o.clipboard = 'unnamedplus'
+end)
+
+
 vim.diagnostic.config({
   virtual_text = true,  -- show inline errors
   signs = true,         -- show signs in gutter
@@ -218,6 +223,7 @@ require("lazy").setup({
 
       -- Typescript setup
       lspconfig.tsserver.setup({
+        capabilities = require("cmp_nvim_lsp").default_capabilities(),
         on_attach = function(_, bufnr)
           local opts = { noremap = true, silent = true, buffer = bufnr }
           vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
@@ -444,3 +450,7 @@ vim.keymap.set("t", "<leader>t", [[<C-\><C-n><cmd>ToggleTerm<CR>]], { noremap = 
 
 -- <leader>t in normal mode (already exists)
 vim.keymap.set("n", "<leader>t", "<cmd>ToggleTerm<CR>", { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader><CR>", function()
+  vim.lsp.buf.definition()
+end, { noremap = true, silent = true })
