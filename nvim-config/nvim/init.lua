@@ -211,66 +211,83 @@ require("lazy").setup({
   },
 
   -- LSP config (tsserver, angular, json, etc.)
-  {
-    "neovim/nvim-lspconfig",
-    config = function()
-      local lspconfig = require("lspconfig")
+    {
+      "neovim/nvim-lspconfig",
+      version = "*", -- or remove this line to always get the latest
+      config = function()
+        local lspconfig = require("lspconfig")
 
-      -- CSS/SCSS LSP
-      lspconfig.cssls.setup({
-        capabilities = require("cmp_nvim_lsp").default_capabilities(),
-      })
+        -- CSS/SCSS
+        lspconfig.cssls.setup({
+          capabilities = require("cmp_nvim_lsp").default_capabilities(),
+        })
 
-      -- Typescript setup
-      lspconfig.tsserver.setup({
-        capabilities = require("cmp_nvim_lsp").default_capabilities(),
-        on_attach = function(_, bufnr)
-          local opts = { noremap = true, silent = true, buffer = bufnr }
-          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+        -- TypeScript/JavaScript - use ts_ls instead of tsserver
+        lspconfig.ts_ls.setup({
+          capabilities = require("cmp_nvim_lsp").default_capabilities(),
+          on_attach = function(_, bufnr)
+            local opts = { noremap = true, silent = true, buffer = bufnr }
 
-          -- Alt+i to apply code actions like missing import
-          vim.keymap.set("n", "<A-i>", function()
-            vim.lsp.buf.code_action({
-              context = {
-                only = { "quickfix", "source.fixAll", "source.organizeImports", "source.addMissingImports.ts" },
-              },
-              apply = true,
-            })
-          end, opts)
-        end,
-      })
+            vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+            vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
 
-      lspconfig.jsonls.setup({})
-    end,
-  },
+            vim.keymap.set("n", "<A-i>", function()
+              vim.lsp.buf.code_action({
+                context = {
+                  only = {
+                    "quickfix",
+                    "source.fixAll",
+                    "source.organizeImports",
+                    "source.addMissingImports.ts"
+                  },
+                },
+                apply = true,
+              })
+            end, opts)
+          end,
+        })
+
+        -- JSON
+        lspconfig.jsonls.setup({})
+      end,
+    },
+
 
   -- Prettier + ESLint formatter integration (via null-ls)
-  {
-    "nvimtools/none-ls.nvim",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    config = function()
-      local null_ls = require("null-ls")
+     {
+  "nvimtools/none-ls.nvim",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  config = function()
+    local null_ls = require("null-ls")
 
-      null_ls.setup({
-        sources = {
-          null_ls.builtins.formatting.prettier,
-          null_ls.builtins.diagnostics.eslint,
-          null_ls.builtins.code_actions.eslint,
-        },
-        on_attach = function(client, bufnr)
-          if client.supports_method("textDocument/formatting") then
-            vim.api.nvim_create_autocmd("BufWritePre", {
-              buffer = bufnr,
-              callback = function()
-                vim.lsp.buf.format({ bufnr = bufnr })
-              end,
+    null_ls.setup({
+      sources = {
+        -- Only use Prettier for formatting
+        null_ls.builtins.formatting.prettier.with({
+          condition = function(utils)
+            return utils.root_has_file({ 
+              ".prettierrc", 
+              ".prettierrc.json", 
+              ".prettierrc.js", 
+              "prettier.config.js", 
+              "package.json" 
             })
-          end
-        end,
-      })
-    end,
-  },
+          end,
+        }),
+      },
+      on_attach = function(client, bufnr)
+        if client.supports_method("textDocument/formatting") then
+          vim.api.nvim_create_autocmd("BufWritePre", {
+            buffer = bufnr,
+            callback = function()
+              vim.lsp.buf.format({ bufnr = bufnr })
+            end,
+          })
+        end
+      end,
+    })
+  end,
+},
 
   -- Telescope fuzzy finder
   {
