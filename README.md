@@ -70,7 +70,7 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
     <code>nvim .</code>
     
     Press shifr + : and type<br />
-    <code>:Checkhealth</code>
+    <code>:checkhealth</code>
     
     If your Vim is working correctly, you can install plugins.<br />
     <code>:Lazy sync</code><br />
