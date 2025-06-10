@@ -69,7 +69,7 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
     After installation, open NvLobiani<br />
     <code>nvim .</code>
     
-    Press shifr + : and type<br />
+    Press <b>shift + :</b> and type<br />
     <code>:checkhealth</code>
     
     If your Vim is working correctly, you can install plugins.<br />
