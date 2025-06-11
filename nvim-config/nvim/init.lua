@@ -538,3 +538,7 @@ vim.keymap.set("n", "<leader>t", "<cmd>ToggleTerm<CR>", { noremap = true, silent
 vim.keymap.set("n", "<leader><CR>", function()
   vim.lsp.buf.definition()
 end, { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>r", function()
+  require("telescope.builtin").oldfiles()
+end, { noremap = true, silent = true, desc = "Open recent files" })
