@@ -22,6 +22,7 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 | 📝 Open module        | `<leader>space + Enter`                |
 | 📝 Open git status    | `<leader>space + H`                    |
 | 📝 Show file history  | `<leader>space + R`                    |
+| 📝 Search word in all file | `<leader>space + FF`              |
 
 ## ⌨ Shortcuts
 
@@ -121,6 +122,13 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
    <code>npm install -g typescript-language-server</code>
    <code>npm install -g vscode-langservers-extractedr</code>
    <code>npm install -g prettier</code>
+
+8. Install ripgrep<br />
+   macOS<br />
+   <code>brew install ripgrep</code>
+
+   Windows/Powershell vis scoop<br />
+   <code>scoop install ripgrep</code>
 
    
 ## 📦 First Launch
