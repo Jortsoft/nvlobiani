@@ -36,7 +36,7 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 | Up to end file        | `<n>Shift + G`                         |
 | Delete line           | `<n>D`                                 |
 | Copy line             | `<n>Y`                                 |
-| Paset line            | `<n>P`                                 |
+| Paste line            | `<n>P`                                 |
 | Select text           | `<v>Arrow buttons`                     |
 | Change selected text  | `<v>C`                                 |
 
