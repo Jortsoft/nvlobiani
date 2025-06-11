@@ -284,6 +284,25 @@ require("lazy").setup({
       config = function()
         local lspconfig = require("lspconfig")
 
+        lspconfig.angularls.setup({
+          cmd = {
+            "ngserver",
+            "--stdio",
+            "--tsProbeLocations",
+            "",
+            "--ngProbeLocations",
+            ""
+          },
+          on_new_config = function(new_config, _)
+            new_config.cmd_env = {
+              NG_LOG_LEVEL = "info",
+            }
+          end,
+          filetypes = { "html", "typescript" },
+          root_dir = lspconfig.util.root_pattern("angular.json", ".git"),
+          capabilities = require("cmp_nvim_lsp").default_capabilities(),
+        })
+
         -- CSS/SCSS
         lspconfig.cssls.setup({
           capabilities = require("cmp_nvim_lsp").default_capabilities(),
@@ -536,9 +555,34 @@ vim.keymap.set("t", "<leader>t", [[<C-\><C-n><cmd>ToggleTerm<CR>]], { noremap = 
 vim.keymap.set("n", "<leader>t", "<cmd>ToggleTerm<CR>", { noremap = true, silent = true })
 
 vim.keymap.set("n", "<leader><CR>", function()
-  vim.lsp.buf.definition()
+  local filetype = vim.bo.filetype
+  local word = vim.fn.expand("<cword>")
+
+  if filetype == "html" and word:match("^app%-") then
+    -- Remove 'app-' prefix and convert dash-case to dot-case
+    local component_name = word
+      :gsub("^app%-", "")             -- remove app- prefix
+      :gsub("(%-)([^%-]+)", function(_, c)
+        return "." .. c
+      end)
+
+    local search_name = component_name .. ".component.ts"
+
+    require("telescope.builtin").find_files({
+      prompt_title = "Find Angular Component",
+      search_file = search_name,
+    })
+
+  else
+    -- fallback to LSP definition (works for .ts)
+    vim.lsp.buf.definition()
+  end
 end, { noremap = true, silent = true })
 
 vim.keymap.set("n", "<leader>r", function()
   require("telescope.builtin").oldfiles()
 end, { noremap = true, silent = true, desc = "Open recent files" })
+
+vim.keymap.set("n", "<leader>ff", function()
+  require("telescope.builtin").live_grep()
+end, { noremap = true, silent = true, desc = "Find word in all files" })
