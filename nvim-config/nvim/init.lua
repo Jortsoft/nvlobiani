@@ -42,6 +42,73 @@ vim.opt.rtp:prepend(lazypath)
 -- Setup plugins with lazy.nvim
 require("lazy").setup({
 
+    {
+    "lewis6991/gitsigns.nvim",
+    config = function()
+      require("gitsigns").setup({
+        signs = {
+          add = { text = "+" },
+          change = { text = "~" },
+          delete = { text = "_" },
+          topdelete = { text = "‾" },
+          changedelete = { text = "~" },
+        },
+        current_line_blame = true,
+        on_attach = function(bufnr)
+          local gs = package.loaded.gitsigns
+          local map = function(mode, lhs, rhs, opts)
+            opts = opts or {}
+            opts.buffer = bufnr
+            vim.keymap.set(mode, lhs, rhs, opts)
+          end
+          map("n", "]c", function()
+            if vim.wo.diff then return "]c" end
+            vim.schedule(gs.next_hunk)
+            return "<Ignore>"
+          end, { expr = true })
+          map("n", "[c", function()
+            if vim.wo.diff then return "[c" end
+            vim.schedule(gs.prev_hunk)
+            return "<Ignore>"
+          end, { expr = true })
+          map("n", "<leader>gs", gs.stage_hunk)
+          map("n", "<leader>gu", gs.undo_stage_hunk)
+          map("n", "<leader>gr", gs.reset_hunk)
+          map("n", "<leader>gR", gs.reset_buffer)
+          map("n", "<leader>gp", gs.preview_hunk)
+          map("n", "<leader>gb", function() gs.blame_line { full = true } end)
+          map("n", "<leader>gd", gs.diffthis)
+        end,
+      })
+    end,
+  },
+  {
+    "tpope/vim-fugitive",
+    cmd = { "Git", "G" },
+    keys = {
+      { "<leader>h", "<cmd>Git<CR>", desc = "Open Git status" },
+    },
+    config = function()
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "fugitive",
+        callback = function()
+          vim.keymap.set("n", "X", function()
+            local line = vim.fn.getline(".")
+            local filename = line:match("%s+.-%s+(.+)")
+            if filename and filename ~= "" then
+              vim.ui.select({ "No", "Yes" }, { prompt = "Discard changes to " .. filename .. "?" }, function(choice)
+                if choice == "Yes" then
+                  vim.fn.system({ "git", "checkout", "--", filename })
+                  vim.cmd("bdelete")
+                  vim.cmd("silent! Git")
+                end
+              end)
+            end
+          end, { buffer = true, nowait = true, silent = true })
+        end,
+      })
+    end,
+  },
   -- Custom Dashboard with "JORTSOFT EDITOR"
 {
   "goolord/alpha-nvim",
