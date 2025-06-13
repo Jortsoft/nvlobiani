@@ -127,6 +127,38 @@ require("lazy").setup({
     end,
   },
 
+  {
+  "folke/tokyonight.nvim",
+  name = "tokyonight",
+  lazy = false,
+  priority = 1000,
+  config = function()
+    -- Don't apply immediately, only on :Theme command
+  end,
+},
+
+
+  {
+  "bluz71/vim-moonfly-colors",
+  name = "moonfly",
+  lazy = false,
+  priority = 1000,
+  config = function()
+    vim.cmd("colorscheme moonfly")
+  end,
+},
+
+{
+  "scottmckendry/cyberdream.nvim",
+  name = "cyberdream",
+  lazy = false,
+  priority = 1000,
+  config = function()
+    -- don't apply immediately; only when :Theme cyberdream is triggered
+  end,
+},
+
+
   -- Atom One Dark theme
   {
   "navarasu/onedark.nvim",
@@ -139,20 +171,41 @@ require("lazy").setup({
     onedark.load()
 
     -- Define :Theme [dark|light] command
-    vim.api.nvim_create_user_command("Theme", function(opts)
-      local style = opts.args:lower()
-      if style == "dark" or style == "light" then
-        onedark.setup({ style = style })
-        onedark.load()
-      else
-        vim.notify("Invalid style: use 'dark' or 'light'", vim.log.levels.ERROR)
-      end
-    end, {
-      nargs = 1,
-      complete = function()
-        return { "dark", "light" }
-      end,
+vim.api.nvim_create_user_command("Theme", function(opts)
+  local style = opts.args:lower()
+  if style == "onedark" then
+    require("onedark").setup({ style = "dark" })
+    require("onedark").load()
+  elseif style == "onelight" then
+    require("onedark").setup({ style = "light" })
+    require("onedark").load()
+  elseif style == "moonfly" then
+    vim.cmd("colorscheme moonfly")
+  elseif style == "cyberdream" then
+    require("cyberdream").setup({
+      transparent = false,
+      italic_comments = true,
+      hide_fillchars = true,
+      borderless_telescope = true,
     })
+    vim.cmd("colorscheme cyberdream")
+  elseif style == "tokyonight" then
+    require("tokyonight").setup({
+      style = "storm", -- options: storm, night, moon, day
+      transparent = false,
+      terminal_colors = true,
+    })
+    vim.cmd("colorscheme tokyonight")
+  else
+    vim.notify("Invalid style: use 'onedark', 'onelight', 'moonfly', 'cyberdream', or 'tokyonight'", vim.log.levels.ERROR)
+  end
+end, {
+  nargs = 1,
+  complete = function()
+    return { "onedark", "onelight", "moonfly", "cyberdream", "tokyonight" }
+  end,
+})
+
   end,
   },
 
