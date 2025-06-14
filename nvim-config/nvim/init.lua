@@ -158,6 +158,14 @@ require("lazy").setup({
   end,
 },
 
+{
+  "numToStr/Comment.nvim",
+  config = function()
+    require("Comment").setup()
+  end,
+},
+
+
 
   -- Atom One Dark theme
   {
@@ -337,13 +345,7 @@ end, {
         -- Only use Prettier for formatting
         null_ls.builtins.formatting.prettier.with({
           condition = function(utils)
-            return utils.root_has_file({ 
-              ".prettierrc", 
-              ".prettierrc.json", 
-              ".prettierrc.js", 
-              "prettier.config.js", 
-              "package.json" 
-            })
+            return true;
           end,
         }),
       },
@@ -493,15 +495,10 @@ vim.keymap.set("n", "<leader>p", "<C-^>", { noremap = true, silent = true })
 
 -- Save files
 vim.keymap.set("n", "<leader>s", function()
-  vim.cmd("write!")  -- <-- force save
-
-  local diagnostics = vim.diagnostic.get(0)
-  if diagnostics and #diagnostics > 0 then
-    vim.defer_fn(function()
-      vim.diagnostic.open_float(nil, { focus = false })
-    end, 100)
-  end
+  vim.lsp.buf.format({ async = false }) -- format explicitly
+  vim.cmd("write") -- then save
 end, { noremap = true, silent = true })
+
 
 
 vim.keymap.set("n", "<D-i>", function()
@@ -572,3 +569,5 @@ end, { noremap = true, silent = true, desc = "Open recent files" })
 vim.keymap.set("n", "<leader>ff", function()
   require("telescope.builtin").live_grep()
 end, { noremap = true, silent = true, desc = "Find word in all files" })
+
+vim.keymap.set("v", "<leader>/", "<Plug>(comment_toggle_linewise_visual)", {})
