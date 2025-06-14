@@ -133,6 +133,9 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
    Windows/Powershell vis scoop<br />
    <code>scoop install ripgrep</code>
 
+8. Install eslint<br />
+   <code>npm install -g eslint</code>
+
    
 ## 📦 First Launch
 Open Neovim:<br />
