@@ -67,9 +67,10 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 # 📸 Screenshots
 
 ---
-
-
+![3](https://github.com/user-attachments/assets/2ea5267a-abd8-4a34-8a10-d3f400a5e065)
+![2](https://github.com/user-attachments/assets/1238989e-8b5a-437e-898f-6f21e8297488)
 <img width="1503" alt="Screenshot 2025-06-09 at 17 39 43" src="https://github.com/user-attachments/assets/b5e5aadc-f906-4b01-8bf4-6ec8d421bdde" />
+![1](https://github.com/user-attachments/assets/b3d912f5-da30-49d0-8cb5-9244af4b961a)
 <img width="1498" alt="Screenshot 2025-06-09 at 17 40 04" src="https://github.com/user-attachments/assets/a7739e31-ec71-4d50-9b3f-c87094ca6f68" />
 
 ---
