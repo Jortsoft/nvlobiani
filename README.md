@@ -22,6 +22,7 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 | 📝 Open module        | `<leader>space + Enter`                |
 | 📝 Show file history  | `<leader>space + R`                    |
 | 📝 Search word in all file | `<leader>space + FF`              |
+| 📝 Comment / Uncomment code | `<leader>space + /`              |
 
 ## ⌨ Shortcuts
 
