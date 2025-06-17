@@ -495,8 +495,8 @@ vim.keymap.set("n", "<leader>p", "<C-^>", { noremap = true, silent = true })
 
 -- Save files
 vim.keymap.set("n", "<leader>s", function()
-  vim.lsp.buf.format({ async = false }) -- format explicitly
-  vim.cmd("write") -- then save
+  vim.lsp.buf.format({ async = false }) -- Format current buffer
+  vim.cmd("wall") -- Save all modified files
 end, { noremap = true, silent = true })
 
 
