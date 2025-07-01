@@ -824,7 +824,7 @@ end, { desc = "Go to definition (smart)" })
 -- Comment toggling
 vim.keymap.set("v", "<leader>/", "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
 
-vim.keymap.set("n", "<leader>c", function()
+vim.keymap.set("n", "<leader>g", function()
   local choices = {
     { label = "✅ Keep Current (ours)", command = "GitConflictChooseOurs" },
     { label = "🔄 Keep Incoming (theirs)", command = "GitConflictChooseTheirs" },
