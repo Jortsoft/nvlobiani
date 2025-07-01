@@ -61,6 +61,10 @@ local break_messages = {
   }
 }
 
+vim.api.nvim_create_user_command("GitConflictDiff", function()
+  vim.cmd("windo diffthis")
+end, { desc = "Enable diff mode in all open windows" })
+
 -- Function to display break reminder in floating window
 local function show_break_message()
   local msg = break_messages[math.random(#break_messages)]
@@ -402,6 +406,14 @@ require("lazy").setup({
       })
     end,
   },
+
+  {
+  "akinsho/git-conflict.nvim",
+  version = "*",
+  config = function()
+    require("git-conflict").setup()
+  end,
+},
 
   -- ===============================================================
   -- FILE MANAGEMENT
@@ -811,3 +823,23 @@ end, { desc = "Go to definition (smart)" })
 
 -- Comment toggling
 vim.keymap.set("v", "<leader>/", "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
+
+vim.keymap.set("n", "<leader>c", function()
+  local choices = {
+    { label = "✅ Keep Current (ours)", command = "GitConflictChooseOurs" },
+    { label = "🔄 Keep Incoming (theirs)", command = "GitConflictChooseTheirs" },
+    { label = "🤝 Keep Both", command = "GitConflictChooseBoth" },
+    { label = "❌ Cancel", command = nil },
+  }
+
+  vim.ui.select(choices, {
+    prompt = "Choose how to resolve this conflict:",
+    format_item = function(item)
+      return item.label
+    end,
+  }, function(choice)
+    if choice and choice.command then
+      vim.cmd(choice.command)
+    end
+  end)
+end, { noremap = true, silent = true, desc = "Resolve Git Conflict" })
