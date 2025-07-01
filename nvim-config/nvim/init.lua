@@ -285,6 +285,23 @@ require("lazy").setup({
     end,
   },
 
+  -- Git lens
+  {
+  "lewis6991/gitsigns.nvim",
+  config = function()
+    require("gitsigns").setup({
+      current_line_blame = true,         -- Show blame text at end of line
+      current_line_blame_opts = {
+        virt_text = true,
+        virt_text_pos = "eol",           -- Show at end of line
+        delay = 1000,                    -- Delay before showing blame
+        ignore_whitespace = false,
+      },
+      current_line_blame_formatter = '<author> • <author_time:%Y-%m-%d> • <summary>',
+    })
+  end
+},
+
   -- Buffer line (tab bar)
   {
     "akinsho/bufferline.nvim",
@@ -544,10 +561,16 @@ require("lazy").setup({
         local global_paths = {
           -- npm global (Linux/macOS)
           "/usr/local/lib/node_modules/@angular/language-server/bin/ngserver",
+
+          -- ✅ Homebrew npm global (Apple Silicon Macs typically use this)
+          "/opt/homebrew/lib/node_modules/@angular/language-server/bin/ngserver",
+
           -- npm global (alternative)
           vim.fn.expand("~/.npm-global/lib/node_modules/@angular/language-server/bin/ngserver"),
+
           -- yarn global
           vim.fn.expand("~/.yarn/global/node_modules/@angular/language-server/bin/ngserver"),
+
           -- pnpm global
           vim.fn.expand("~/.local/share/pnpm/global/5/node_modules/@angular/language-server/bin/ngserver"),
         }
@@ -616,7 +639,7 @@ require("lazy").setup({
       })
 
       -- TypeScript/JavaScript Language Server
-      lspconfig.ts_ls.setup({
+      lspconfig.tsserver.setup({
         capabilities = capabilities,
         root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
         on_attach = function(client, bufnr)
