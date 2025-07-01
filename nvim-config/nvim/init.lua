@@ -697,13 +697,16 @@ require("lazy").setup({
 
       null_ls.setup({
         sources = {
-          null_ls.builtins.formatting.prettier,
+          null_ls.builtins.formatting.prettier.with({
+            filetypes = { "html", "css", "javascript", "typescript" },
+          }),
         },
         on_attach = function(client, bufnr)
-          if client.supports_method("textDocument/formatting") then
+          if client.supports_method and client:supports_method("textDocument/formatting") then
             vim.api.nvim_create_autocmd("BufWritePre", {
               buffer = bufnr,
               callback = function()
+                print("Formatting HTML...")
                 vim.lsp.buf.format({ bufnr = bufnr })
               end,
             })
