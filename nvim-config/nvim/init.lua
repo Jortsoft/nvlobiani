@@ -23,6 +23,23 @@ vim.schedule(function()
   vim.o.clipboard = 'unnamedplus'
 end)
 
+-- Force filetype for Angular component templates
+vim.cmd([[
+    autocmd BufRead,BufNewFile *.component.html set filetype=angular.html
+]])
+
+vim.cmd([[
+  autocmd BufRead,BufNewFile *.html set filetype=html
+]])
+
+vim.cmd([[
+  autocmd FileType angular.html syntax match ngLet /@let\s\+\w\+/
+  autocmd FileType angular.html syntax match ngFor /@for\s\+(.*)\s+{/
+  autocmd FileType angular.html highlight link ngLet Keyword
+  autocmd FileType angular.html highlight link ngFor Repeat
+]])
+
+
 -- ===================================================================
 -- BREAK REMINDER SYSTEM
 -- ===================================================================
@@ -233,6 +250,12 @@ require("lazy").setup({
     end,
   },
 
+  {
+  "mattn/emmet-vim",
+  ft = { "html", "angular.html" }
+},
+
+
   -- Status line with real-time clock and timer
   {
     "nvim-lualine/lualine.nvim",
@@ -302,6 +325,31 @@ require("lazy").setup({
         ignore_whitespace = false,
       },
       current_line_blame_formatter = '<author> • <author_time:%Y-%m-%d> • <summary>',
+    })
+  end
+},
+
+{
+  "HerringtonDarkholme/yats.vim", -- use SSH instead of "andys8/vim-angular"
+  ft = { "typescript", "typescriptreact", "html", "angular.html" },
+}, 
+
+{
+  "nvim-treesitter/nvim-treesitter",
+  build = ":TSUpdate",
+  config = function()
+    require("nvim-treesitter.configs").setup({
+      ensure_installed = {
+        "html",
+        "typescript",
+        "css",
+        "javascript",
+        "json"
+      },
+      highlight = {
+        enable = true,
+        additional_vim_regex_highlighting = false,
+      },
     })
   end
 },
