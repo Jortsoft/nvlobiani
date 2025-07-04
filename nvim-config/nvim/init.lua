@@ -41,6 +41,9 @@ vim.cmd([[
 
 vim.notify("Open file manager with <leader>j", vim.log.levels.INFO)
 
+vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#1e1e2e", fg = "#ffffff" })
+vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#1e1e2e", fg = "#6c7086" })
+
 -- ===================================================================
 -- BREAK REMINDER SYSTEM
 -- ===================================================================
@@ -328,6 +331,81 @@ require("lazy").setup({
       current_line_blame_formatter = '<author> • <author_time:%Y-%m-%d> • <summary>',
     })
   end
+},
+
+{
+  "folke/noice.nvim",
+  dependencies = {
+    "MunifTanjim/nui.nvim",
+    "rcarriga/nvim-notify",
+  },
+  config = function()
+    require("noice").setup({
+      lsp = {
+        override = {
+          ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+          ["vim.lsp.util.stylize_markdown"] = true,
+        },
+      },
+      cmdline = {
+        view = "cmdline_popup", -- Pretty command line
+        format = {
+          cmdline = { icon = "" },
+          search_down = { icon = "🔍⌄" },
+          search_up = { icon = "🔍⌃" },
+        },
+      },
+      views = {
+        cmdline_popup = {
+          border = {
+            style = "rounded", -- 🌟 Rounded corners
+            padding = { 0, 1 },
+          },
+          position = {
+            row = 5,
+            col = "50%",
+          },
+          size = {
+            width = 60,
+            height = "auto",
+          },
+        },
+        popupmenu = {
+          relative = "editor",
+          border = {
+            style = "rounded",
+          },
+          position = {
+            row = 8,
+            col = "50%",
+          },
+          size = {
+            width = 60,
+            height = 10,
+          },
+        },
+      },
+      presets = {
+        bottom_search = false,         -- Use floating search
+        command_palette = true,        -- Cmdline centered
+        long_message_to_split = true,  -- Messages go to split
+        inc_rename = true,
+        lsp_doc_border = true,
+      },
+    })
+  end,
+},
+
+{
+  "rcarriga/nvim-notify",
+  config = function()
+    require("notify").setup({
+      background_colour = "#1e1e2e", -- Set to your preferred dark background
+      stages = "fade",   
+      render = "compact",           -- Optional: smooth popup
+      timeout = 3000,
+    })
+  end,
 },
 
 {
@@ -780,7 +858,10 @@ require("lazy").setup({
 
       require("toggleterm").setup({
         direction = "float",
-        float_opts = { border = "curved" },
+          float_opts = {
+            border = "rounded",
+            winblend = 0,
+          },
         shell = shell,
       })
     end,
@@ -897,23 +978,25 @@ vim.keymap.set("n", "<leader>g", function()
 end, { noremap = true, silent = true, desc = "Resolve Git Conflict" })
 
 vim.keymap.set("n", "<leader>j", function()
+  local api = require("nvim-tree.api")
+
   local actions = {
-    { label = "📄 Rename", cmd = "NvimTreeRename" },
-    { label = "➕ Create", cmd = "NvimTreeCreate" },
-    { label = "🗑️ Delete", cmd = "NvimTreeRemove" },
-    { label = "📁 Move", cmd = "NvimTreeCut" },
-    { label = "📋 Copy", cmd = "NvimTreeCopy" },
-    { label = "❌ Cancel", cmd = nil },
+    { label = "📄 Rename", fn = api.fs.rename },
+    { label = "➕ Create", fn = api.fs.create },
+    { label = "🗑️ Delete", fn = api.fs.remove },
+    { label = "📁 Move", fn = api.fs.cut },
+    { label = "📋 Copy", fn = api.fs.copy.node },
+    { label = "❌ Cancel", fn = nil },
   }
 
   vim.ui.select(actions, {
-    prompt = "What do you want to do?",
+    prompt = "File action:",
     format_item = function(item)
       return item.label
     end,
   }, function(choice)
-    if choice and choice.cmd then
-      vim.cmd(choice.cmd)
+    if choice and choice.fn then
+      choice.fn()
     end
   end)
-end, { desc = "📦 File operations menu" })
+end, { desc = "📦 File/folder action menu" })
