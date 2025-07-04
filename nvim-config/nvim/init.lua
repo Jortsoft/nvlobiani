@@ -39,6 +39,7 @@ vim.cmd([[
   autocmd FileType angular.html highlight link ngFor Repeat
 ]])
 
+vim.notify("Open file manager with <leader>j", vim.log.levels.INFO)
 
 -- ===================================================================
 -- BREAK REMINDER SYSTEM
@@ -894,3 +895,25 @@ vim.keymap.set("n", "<leader>g", function()
     end
   end)
 end, { noremap = true, silent = true, desc = "Resolve Git Conflict" })
+
+vim.keymap.set("n", "<leader>j", function()
+  local actions = {
+    { label = "📄 Rename", cmd = "NvimTreeRename" },
+    { label = "➕ Create", cmd = "NvimTreeCreate" },
+    { label = "🗑️ Delete", cmd = "NvimTreeRemove" },
+    { label = "📁 Move", cmd = "NvimTreeCut" },
+    { label = "📋 Copy", cmd = "NvimTreeCopy" },
+    { label = "❌ Cancel", cmd = nil },
+  }
+
+  vim.ui.select(actions, {
+    prompt = "What do you want to do?",
+    format_item = function(item)
+      return item.label
+    end,
+  }, function(choice)
+    if choice and choice.cmd then
+      vim.cmd(choice.cmd)
+    end
+  end)
+end, { desc = "📦 File operations menu" })
