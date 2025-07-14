@@ -48,6 +48,17 @@ vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#1e1e2e", fg = "#6c7086" })
 -- BREAK REMINDER SYSTEM
 -- ===================================================================
 
+vim.env.CLICOLOR = "1"
+vim.env.LSCOLORS = "ExFxBxDxCxegedabagacad"
+
+-- Try to set TERM to xterm-256color if not already set
+if vim.env.TERM == nil or vim.env.TERM == "" then
+  vim.env.TERM = "xterm-256color"
+end
+
+-- Optional: Enable colored output for common commands like ls
+vim.cmd([[command! Ls :!ls --color=auto]])
+
 -- Motivational messages for break reminders
 local break_messages = {
   {
@@ -593,6 +604,7 @@ require("lazy").setup({
       })
     end,
   },
+  
 
   -- ===============================================================
   -- CODING TOOLS
@@ -863,6 +875,8 @@ require("lazy").setup({
             winblend = 0,
           },
         shell = shell,
+          start_in_insert = true,
+  auto_scroll = true,
       })
     end,
   },
