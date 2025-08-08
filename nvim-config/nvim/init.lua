@@ -1,7 +1,29 @@
 -- ===================================================================
 -- JORTSOFT NEOVIM CONFIGURATION
 -- A clean, well-organized Neovim setup with modern plugins
+-- Now with framework switching support (Angular/Vue)
 -- ===================================================================
+
+-- ===================================================================
+-- FRAMEWORK CONFIGURATION STATE
+-- ===================================================================
+vim.g.current_framework = vim.g.current_framework or "angular" -- Default framework, persists across sessions
+
+-- Auto-initialize framework on startup
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    -- Ensure plugins are loaded for the current framework
+    vim.defer_fn(function()
+      if vim.g.current_framework == "angular" then
+        vim.cmd("silent! Lazy load yats.vim emmet-vim")
+      elseif vim.g.current_framework == "vue" then
+        vim.cmd("silent! Lazy load vim-vue emmet-vim")
+      end
+      vim.notify(string.format("🚀 Framework: %s", vim.g.current_framework:upper()), vim.log.levels.INFO)
+    end, 100)
+  end,
+  desc = "Initialize framework plugins on startup"
+})
 
 -- ===================================================================
 -- BASIC SETTINGS
@@ -14,6 +36,8 @@ vim.o.mouse = "a"                -- Enable mouse support
 vim.o.termguicolors = true       -- Enable 24-bit RGB colors
 vim.o.showtabline = 2            -- Always show tabline
 vim.g.mapleader = " "            -- Set space as leader key
+vim.o.timeoutlen = 300           -- Faster key sequence completion (default is 1000ms)
+vim.o.ttimeoutlen = 0            -- Make ESC instantaneous
 
 -- Disable providers we don't need
 vim.g.loaded_perl_provider = 0
@@ -23,21 +47,34 @@ vim.schedule(function()
   vim.o.clipboard = 'unnamedplus'
 end)
 
--- Force filetype for Angular component templates
-vim.cmd([[
-    autocmd BufRead,BufNewFile *.component.html set filetype=angular.html
-]])
+-- Function to setup Angular-specific autocmds
+local function setup_angular_autocmds()
+  vim.cmd([[
+    augroup AngularSetup
+      autocmd!
+      autocmd BufRead,BufNewFile *.component.html set filetype=angular.html
+      autocmd BufRead,BufNewFile *.html set filetype=html
+      autocmd FileType angular.html syntax match ngLet /@let\s\+\w\+/
+      autocmd FileType angular.html syntax match ngFor /@for\s\+(.*)\s+{/
+      autocmd FileType angular.html highlight link ngLet Keyword
+      autocmd FileType angular.html highlight link ngFor Repeat
+    augroup END
+  ]])
+end
 
-vim.cmd([[
-  autocmd BufRead,BufNewFile *.html set filetype=html
-]])
+-- Function to setup Vue-specific autocmds
+local function setup_vue_autocmds()
+  vim.cmd([[
+    augroup VueSetup
+      autocmd!
+      autocmd BufRead,BufNewFile *.vue set filetype=vue
+      autocmd FileType vue syntax sync fromstart
+    augroup END
+  ]])
+end
 
-vim.cmd([[
-  autocmd FileType angular.html syntax match ngLet /@let\s\+\w\+/
-  autocmd FileType angular.html syntax match ngFor /@for\s\+(.*)\s+{/
-  autocmd FileType angular.html highlight link ngLet Keyword
-  autocmd FileType angular.html highlight link ngFor Repeat
-]])
+-- Initialize with Angular by default
+setup_angular_autocmds()
 
 vim.notify("Open file manager with <leader>j", vim.log.levels.INFO)
 
@@ -47,17 +84,6 @@ vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#1e1e2e", fg = "#6c7086" })
 -- ===================================================================
 -- BREAK REMINDER SYSTEM
 -- ===================================================================
-
-vim.env.CLICOLOR = "1"
-vim.env.LSCOLORS = "ExFxBxDxCxegedabagacad"
-
--- Try to set TERM to xterm-256color if not already set
-if vim.env.TERM == nil or vim.env.TERM == "" then
-  vim.env.TERM = "xterm-256color"
-end
-
--- Optional: Enable colored output for common commands like ls
-vim.cmd([[command! Ls :!ls --color=auto]])
 
 -- Motivational messages for break reminders
 local break_messages = {
@@ -146,6 +172,84 @@ vim.diagnostic.config({
 })
 
 -- ===================================================================
+-- FRAMEWORK SWITCHING SYSTEM
+-- ===================================================================
+
+-- Framework-specific LSP setup functions (will be populated after plugins load)
+vim.g.setup_angular_lsp = function() end
+vim.g.setup_vue_lsp = function() end
+
+-- Main framework switching command
+vim.api.nvim_create_user_command("Framework", function(opts)
+  local framework = opts.args:lower()
+  
+  if framework == "angular" then
+    vim.g.current_framework = "angular"
+    
+    -- Clear Vue autocmds and set Angular ones
+    vim.cmd("augroup VueSetup | autocmd! | augroup END")
+    setup_angular_autocmds()
+    
+    -- Force load Angular-related plugins
+    vim.cmd("Lazy load yats.vim emmet-vim")
+    
+    -- Stop all LSP clients
+    vim.lsp.stop_client(vim.lsp.get_active_clients())
+    
+    -- Setup Angular LSP
+    vim.schedule(function()
+      if vim.g.setup_angular_lsp then
+        vim.g.setup_angular_lsp()
+      end
+      vim.notify("🅰️ Switched to Angular configuration", vim.log.levels.INFO)
+      vim.notify("LSP servers restarted for Angular", vim.log.levels.INFO)
+    end)
+    
+  elseif framework == "vue" then
+    vim.g.current_framework = "vue"
+    
+    -- Clear Angular autocmds and set Vue ones
+    vim.cmd("augroup AngularSetup | autocmd! | augroup END")
+    setup_vue_autocmds()
+    
+    -- Force load Vue-related plugins
+    vim.cmd("Lazy load vim-vue emmet-vim")
+    
+    -- Stop all LSP clients
+    vim.lsp.stop_client(vim.lsp.get_active_clients())
+    
+    -- Setup Vue LSP
+    vim.schedule(function()
+      if vim.g.setup_vue_lsp then
+        vim.g.setup_vue_lsp()
+      end
+      vim.notify("✌️ Switched to Vue configuration", vim.log.levels.INFO)
+      vim.notify("LSP servers restarted for Vue", vim.log.levels.INFO)
+    end)
+    
+  else
+    vim.notify("❌ Invalid framework. Use: Framework angular or Framework vue", vim.log.levels.ERROR)
+  end
+end, {
+  nargs = 1,
+  complete = function()
+    return { "angular", "vue" }
+  end,
+  desc = "Set framework configuration (angular or vue)"
+})
+
+-- Alternative syntax with 'set language=' for convenience
+vim.api.nvim_create_user_command("SetLanguage", function(opts)
+  vim.cmd("Framework " .. opts.args)
+end, {
+  nargs = 1,
+  complete = function()
+    return { "angular", "vue" }
+  end,
+  desc = "Set language/framework (angular or vue)"
+})
+
+-- ===================================================================
 -- CUSTOM COMMANDS
 -- ===================================================================
 
@@ -168,6 +272,35 @@ vim.api.nvim_create_user_command("AngularInstallGlobal", function()
   vim.fn.system("npm install -g @angular/language-server")
   vim.notify("✅ Angular Language Server installed globally! Restart Neovim.", vim.log.levels.INFO)
 end, { desc = "Install Angular Language Server globally" })
+
+-- Commands to install Vue Language Server
+vim.api.nvim_create_user_command("VueInstallLocal", function()
+  vim.notify("📦 Installing Vue Language Server locally...", vim.log.levels.INFO)
+  vim.fn.system("npm install --save-dev @vue/language-server @vue/typescript-plugin")
+  vim.notify("✅ Vue Language Server installed locally! Restart Neovim.", vim.log.levels.INFO)
+end, { desc = "Install Vue Language Server locally" })
+
+vim.api.nvim_create_user_command("VueInstallGlobal", function()
+  vim.notify("🌍 Installing Vue Language Server globally...", vim.log.levels.INFO)
+  vim.fn.system("npm install -g @vue/language-server @vue/typescript-plugin")
+  vim.notify("✅ Vue Language Server installed globally! Restart Neovim.", vim.log.levels.INFO)
+end, { desc = "Install Vue Language Server globally" })
+
+-- Check current framework configuration
+vim.api.nvim_create_user_command("FrameworkStatus", function()
+  local framework = vim.g.current_framework or "none"
+  local active_clients = vim.lsp.get_active_clients()
+  local client_names = {}
+  
+  for _, client in ipairs(active_clients) do
+    table.insert(client_names, client.name)
+  end
+  
+  vim.notify(string.format("🔧 Current framework: %s\n📡 Active LSP servers: %s", 
+    framework:upper(), 
+    table.concat(client_names, ", ")
+  ), vim.log.levels.INFO)
+end, { desc = "Show current framework configuration" })
 
 vim.api.nvim_create_user_command("AngularCheck", function()
   local util = require("lspconfig.util")
@@ -265,11 +398,11 @@ require("lazy").setup({
     end,
   },
 
+  -- Emmet for both Angular and Vue
   {
-  "mattn/emmet-vim",
-  ft = { "html", "angular.html" }
-},
-
+    "mattn/emmet-vim",
+    lazy = false,  -- Always load on startup
+  },
 
   -- Status line with real-time clock and timer
   {
@@ -312,7 +445,13 @@ require("lazy").setup({
         sections = {
           lualine_a = { "mode" },
           lualine_b = { "branch" },
-          lualine_c = { "filename" },
+          lualine_c = { 
+            "filename",
+            function() 
+              return vim.g.current_framework and 
+                     string.format("[%s]", vim.g.current_framework:upper()) or ""
+            end
+          },
           lualine_x = {
             "encoding",
             "fileformat",
@@ -329,120 +468,129 @@ require("lazy").setup({
 
   -- Git lens
   {
-  "lewis6991/gitsigns.nvim",
-  config = function()
-    require("gitsigns").setup({
-      current_line_blame = true,         -- Show blame text at end of line
-      current_line_blame_opts = {
-        virt_text = true,
-        virt_text_pos = "eol",           -- Show at end of line
-        delay = 1000,                    -- Delay before showing blame
-        ignore_whitespace = false,
-      },
-      current_line_blame_formatter = '<author> • <author_time:%Y-%m-%d> • <summary>',
-    })
-  end
-},
-
-{
-  "folke/noice.nvim",
-  dependencies = {
-    "MunifTanjim/nui.nvim",
-    "rcarriga/nvim-notify",
+    "lewis6991/gitsigns.nvim",
+    config = function()
+      require("gitsigns").setup({
+        current_line_blame = true,
+        current_line_blame_opts = {
+          virt_text = true,
+          virt_text_pos = "eol",
+          delay = 1000,
+          ignore_whitespace = false,
+        },
+        current_line_blame_formatter = '<author> • <author_time:%Y-%m-%d> • <summary>',
+      })
+    end
   },
-  config = function()
-    require("noice").setup({
-      lsp = {
-        override = {
-          ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
-          ["vim.lsp.util.stylize_markdown"] = true,
-        },
-      },
-      cmdline = {
-        view = "cmdline_popup", -- Pretty command line
-        format = {
-          cmdline = { icon = "" },
-          search_down = { icon = "🔍⌄" },
-          search_up = { icon = "🔍⌃" },
-        },
-      },
-      views = {
-        cmdline_popup = {
-          border = {
-            style = "rounded", -- 🌟 Rounded corners
-            padding = { 0, 1 },
-          },
-          position = {
-            row = 5,
-            col = "50%",
-          },
-          size = {
-            width = 60,
-            height = "auto",
-          },
-        },
-        popupmenu = {
-          relative = "editor",
-          border = {
-            style = "rounded",
-          },
-          position = {
-            row = 8,
-            col = "50%",
-          },
-          size = {
-            width = 60,
-            height = 10,
-          },
-        },
-      },
-      presets = {
-        bottom_search = false,         -- Use floating search
-        command_palette = true,        -- Cmdline centered
-        long_message_to_split = true,  -- Messages go to split
-        inc_rename = true,
-        lsp_doc_border = true,
-      },
-    })
-  end,
-},
 
-{
-  "rcarriga/nvim-notify",
-  config = function()
-    require("notify").setup({
-      background_colour = "#1e1e2e", -- Set to your preferred dark background
-      stages = "fade",   
-      render = "compact",           -- Optional: smooth popup
-      timeout = 3000,
-    })
-  end,
-},
+  {
+    "folke/noice.nvim",
+    dependencies = {
+      "MunifTanjim/nui.nvim",
+      "rcarriga/nvim-notify",
+    },
+    config = function()
+      require("noice").setup({
+        lsp = {
+          override = {
+            ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+            ["vim.lsp.util.stylize_markdown"] = true,
+          },
+        },
+        cmdline = {
+          view = "cmdline_popup",
+          format = {
+            cmdline = { icon = "" },
+            search_down = { icon = "🔍⌄" },
+            search_up = { icon = "🔍⌃" },
+          },
+        },
+        views = {
+          cmdline_popup = {
+            border = {
+              style = "rounded",
+              padding = { 0, 1 },
+            },
+            position = {
+              row = 5,
+              col = "50%",
+            },
+            size = {
+              width = 60,
+              height = "auto",
+            },
+          },
+          popupmenu = {
+            relative = "editor",
+            border = {
+              style = "rounded",
+            },
+            position = {
+              row = 8,
+              col = "50%",
+            },
+            size = {
+              width = 60,
+              height = 10,
+            },
+          },
+        },
+        presets = {
+          bottom_search = false,
+          command_palette = true,
+          long_message_to_split = true,
+          inc_rename = true,
+          lsp_doc_border = true,
+        },
+      })
+    end,
+  },
 
-{
-  "HerringtonDarkholme/yats.vim", -- use SSH instead of "andys8/vim-angular"
-  ft = { "typescript", "typescriptreact", "html", "angular.html" },
-}, 
+  {
+    "rcarriga/nvim-notify",
+    config = function()
+      require("notify").setup({
+        background_colour = "#1e1e2e",
+        stages = "fade",   
+        render = "compact",
+        timeout = 3000,
+      })
+    end,
+  },
 
-{
-  "nvim-treesitter/nvim-treesitter",
-  build = ":TSUpdate",
-  config = function()
-    require("nvim-treesitter.configs").setup({
-      ensure_installed = {
-        "html",
-        "typescript",
-        "css",
-        "javascript",
-        "json"
-      },
-      highlight = {
-        enable = true,
-        additional_vim_regex_highlighting = false,
-      },
-    })
-  end
-},
+  -- Angular TypeScript support
+  {
+    "HerringtonDarkholme/yats.vim",
+    lazy = false,  -- Always load on startup
+  }, 
+
+  -- Vue syntax highlighting
+  {
+    "posva/vim-vue",
+    lazy = false,  -- Always load on startup
+  },
+
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        ensure_installed = {
+          "html",
+          "typescript",
+          "css",
+          "javascript",
+          "json",
+          "vue",
+          "scss",
+        },
+        highlight = {
+          enable = true,
+          additional_vim_regex_highlighting = { "vue" },
+        },
+      })
+    end
+  },
 
   -- Buffer line (tab bar)
   {
@@ -546,12 +694,12 @@ require("lazy").setup({
   },
 
   {
-  "akinsho/git-conflict.nvim",
-  version = "*",
-  config = function()
-    require("git-conflict").setup()
-  end,
-},
+    "akinsho/git-conflict.nvim",
+    version = "*",
+    config = function()
+      require("git-conflict").setup()
+    end,
+  },
 
   -- ===============================================================
   -- FILE MANAGEMENT
@@ -604,7 +752,6 @@ require("lazy").setup({
       })
     end,
   },
-  
 
   -- ===============================================================
   -- CODING TOOLS
@@ -672,11 +819,11 @@ require("lazy").setup({
     end,
   },
 
-  -- LSP Configuration
+  -- LSP Configuration with framework switching
   {
     "neovim/nvim-lspconfig",
     version = "*",
-    dependencies = { "b0o/schemastore.nvim" }, -- JSON schemas
+    dependencies = { "b0o/schemastore.nvim" },
     config = function()
       local lspconfig = require("lspconfig")
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
@@ -685,7 +832,6 @@ require("lazy").setup({
       local function get_angular_ls_cmd(root_dir)
         local util = require("lspconfig.util")
         
-        -- Try to find @angular/language-server in node_modules
         local node_modules_path = util.path.join(root_dir, "node_modules")
         local angular_server_path = util.path.join(
           node_modules_path,
@@ -695,7 +841,6 @@ require("lazy").setup({
           "ngserver"
         )
         
-        -- Check if the Angular server exists
         if util.path.exists(angular_server_path) then
           return {
             "node",
@@ -708,21 +853,11 @@ require("lazy").setup({
           }
         end
         
-        -- Try global installation paths
         local global_paths = {
-          -- npm global (Linux/macOS)
           "/usr/local/lib/node_modules/@angular/language-server/bin/ngserver",
-
-          -- ✅ Homebrew npm global (Apple Silicon Macs typically use this)
           "/opt/homebrew/lib/node_modules/@angular/language-server/bin/ngserver",
-
-          -- npm global (alternative)
           vim.fn.expand("~/.npm-global/lib/node_modules/@angular/language-server/bin/ngserver"),
-
-          -- yarn global
           vim.fn.expand("~/.yarn/global/node_modules/@angular/language-server/bin/ngserver"),
-
-          -- pnpm global
           vim.fn.expand("~/.local/share/pnpm/global/5/node_modules/@angular/language-server/bin/ngserver"),
         }
         
@@ -740,7 +875,6 @@ require("lazy").setup({
           end
         end
         
-        -- Try using npx as fallback (if @angular/language-server is available)
         return {
           "npx",
           "@angular/language-server",
@@ -752,78 +886,149 @@ require("lazy").setup({
         }
       end
 
-      -- Angular Language Server (with smart detection)
-      lspconfig.angularls.setup({
-        cmd = function()
-          local root_dir = lspconfig.util.root_pattern("angular.json", "nx.json", ".git")(vim.fn.getcwd())
-          if root_dir then
-            return get_angular_ls_cmd(root_dir)
-          end
-          -- Fallback if no root directory found
-          return { "npx", "@angular/language-server", "--stdio" }
-        end,
-        on_new_config = function(new_config, new_root_dir)
-          if new_root_dir then
-            new_config.cmd = get_angular_ls_cmd(new_root_dir)
-          end
-          new_config.cmd_env = { NG_LOG_LEVEL = "info" }
-        end,
-        filetypes = { "html", "typescript", "typescriptreact" },
-        root_dir = lspconfig.util.root_pattern("angular.json", "nx.json", ".git"),
-        capabilities = capabilities,
-        single_file_support = false, -- Angular LS needs a project context
-        on_attach = function(client, bufnr)
-          -- Disable Angular LS formatting in favor of Prettier
-          client.server_capabilities.documentFormattingProvider = false
-          client.server_capabilities.documentRangeFormattingProvider = false
-          
-          local opts = { noremap = true, silent = true, buffer = bufnr }
-          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-        end,
-      })
+      -- Setup Angular LSP function
+      vim.g.setup_angular_lsp = function()
+        lspconfig.angularls.setup({
+          cmd = function()
+            local root_dir = lspconfig.util.root_pattern("angular.json", "nx.json", ".git")(vim.fn.getcwd())
+            if root_dir then
+              return get_angular_ls_cmd(root_dir)
+            end
+            return { "npx", "@angular/language-server", "--stdio" }
+          end,
+          on_new_config = function(new_config, new_root_dir)
+            if new_root_dir then
+              new_config.cmd = get_angular_ls_cmd(new_root_dir)
+            end
+            new_config.cmd_env = { NG_LOG_LEVEL = "info" }
+          end,
+          filetypes = { "html", "typescript", "typescriptreact" },
+          root_dir = lspconfig.util.root_pattern("angular.json", "nx.json", ".git"),
+          capabilities = capabilities,
+          single_file_support = false,
+          on_attach = function(client, bufnr)
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+            
+            local opts = { noremap = true, silent = true, buffer = bufnr }
+            vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+            vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+          end,
+        })
+        
+        -- TypeScript server for Angular
+        lspconfig.tsserver.setup({
+          capabilities = capabilities,
+          root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
+          on_attach = function(client, bufnr)
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+            
+            local opts = { noremap = true, silent = true, buffer = bufnr }
+            vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+            vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+            vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+            vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+          end,
+        })
+      end
 
-      -- CSS/SCSS Language Server
-      lspconfig.cssls.setup({ 
-        capabilities = capabilities,
-        filetypes = { "css", "scss", "less" }
-      })
+      -- Setup Vue LSP function
+      vim.g.setup_vue_lsp = function()
+        -- Volar (Vue Language Server)
+        lspconfig.volar.setup({
+          capabilities = capabilities,
+          filetypes = { "vue", "typescript", "javascript", "typescriptreact", "javascriptreact" },
+          init_options = {
+            typescript = {
+              tsdk = vim.fn.getcwd() .. "/node_modules/typescript/lib"
+            },
+            vue = {
+              hybridMode = false,
+            },
+          },
+          on_attach = function(client, bufnr)
+            local opts = { noremap = true, silent = true, buffer = bufnr }
+            vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+            vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+            vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+            vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+          end,
+        })
 
-      -- TypeScript/JavaScript Language Server
-      lspconfig.tsserver.setup({
-        capabilities = capabilities,
-        root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
-        on_attach = function(client, bufnr)
-          -- Disable ts_ls formatting in favor of Prettier
-          client.server_capabilities.documentFormattingProvider = false
-          client.server_capabilities.documentRangeFormattingProvider = false
-          
-          local opts = { noremap = true, silent = true, buffer = bufnr }
-          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          
-          -- Additional TypeScript-specific keymaps
-          vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
-          vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
-        end,
-      })
+        -- TypeScript server for Vue (with Vue plugin)
+        lspconfig.tsserver.setup({
+          capabilities = capabilities,
+          root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
+          init_options = {
+            plugins = {
+              {
+                name = "@vue/typescript-plugin",
+                location = vim.fn.getcwd() .. "/node_modules/@vue/typescript-plugin",
+                languages = { "vue" },
+              },
+            },
+          },
+          filetypes = { "typescript", "javascript", "typescriptreact", "javascriptreact", "vue" },
+          on_attach = function(client, bufnr)
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+            
+            local opts = { noremap = true, silent = true, buffer = bufnr }
+            vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+            vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+            vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+            vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+          end,
+        })
+      end
 
-      -- JSON Language Server
-      lspconfig.jsonls.setup({ 
-        capabilities = capabilities,
-        settings = {
-          json = {
-            schemas = require('schemastore').json.schemas(),
-            validate = { enable = true },
+      -- Common LSP servers for both frameworks
+      local function setup_common_lsp()
+        -- CSS/SCSS Language Server
+        lspconfig.cssls.setup({ 
+          capabilities = capabilities,
+          filetypes = { "css", "scss", "less", "vue" }
+        })
+
+        -- JSON Language Server
+        lspconfig.jsonls.setup({ 
+          capabilities = capabilities,
+          settings = {
+            json = {
+              schemas = require('schemastore').json.schemas(),
+              validate = { enable = true },
+            }
           }
-        }
-      })
+        })
 
-      -- HTML Language Server
-      lspconfig.html.setup({ 
-        capabilities = capabilities,
-        filetypes = { "html", "templ" }
-      })
+        -- HTML Language Server
+        lspconfig.html.setup({ 
+          capabilities = capabilities,
+          filetypes = { "html", "templ", "vue" }
+        })
+
+        -- ESLint
+        lspconfig.eslint.setup({
+          capabilities = capabilities,
+          on_attach = function(client, bufnr)
+            vim.api.nvim_create_autocmd("BufWritePre", {
+              buffer = bufnr,
+              command = "EslintFixAll",
+            })
+          end,
+        })
+      end
+
+      -- Setup common LSP servers
+      setup_common_lsp()
+
+      -- Initialize with the current framework
+      if vim.g.current_framework == "angular" then
+        vim.g.setup_angular_lsp()
+      elseif vim.g.current_framework == "vue" then
+        vim.g.setup_vue_lsp()
+      end
     end,
   },
 
@@ -837,7 +1042,17 @@ require("lazy").setup({
       null_ls.setup({
         sources = {
           null_ls.builtins.formatting.prettier.with({
-            filetypes = { "html", "css", "javascript", "typescript" },
+            filetypes = { 
+              "html", 
+              "css", 
+              "scss",
+              "javascript", 
+              "typescript", 
+              "vue",
+              "json",
+              "yaml",
+              "markdown"
+            },
           }),
         },
         on_attach = function(client, bufnr)
@@ -845,7 +1060,6 @@ require("lazy").setup({
             vim.api.nvim_create_autocmd("BufWritePre", {
               buffer = bufnr,
               callback = function()
-                print("Formatting HTML...")
                 vim.lsp.buf.format({ bufnr = bufnr })
               end,
             })
@@ -875,8 +1089,6 @@ require("lazy").setup({
             winblend = 0,
           },
         shell = shell,
-          start_in_insert = true,
-  auto_scroll = true,
       })
     end,
   },
@@ -887,12 +1099,12 @@ require("lazy").setup({
 -- KEY MAPPINGS
 -- ===================================================================
 
--- File operations
-vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle file tree" })
-vim.keymap.set("n", "<leader>f", ":Telescope find_files<CR>", { desc = "Find files" })
-vim.keymap.set("n", "<leader>r", ":Telescope oldfiles<CR>", { desc = "Recent files" })
-vim.keymap.set("n", "<leader>ff", ":Telescope live_grep<CR>", { desc = "Find in files" })
-vim.keymap.set("n", "<leader>l", ":Telescope current_buffer_fuzzy_find<CR>", { desc = "Find in current file" })
+-- File operations (with nowait for faster response)
+vim.keymap.set("n", "<leader>f", ":Telescope find_files<CR>", { desc = "Find files", nowait = true })
+vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle file tree", nowait = true })
+vim.keymap.set("n", "<leader>r", ":Telescope oldfiles<CR>", { desc = "Recent files", nowait = true })
+vim.keymap.set("n", "<leader>ff", ":Telescope live_grep<CR>", { desc = "Find in files", nowait = true })
+vim.keymap.set("n", "<leader>l", ":Telescope current_buffer_fuzzy_find<CR>", { desc = "Find in current file", nowait = true })
 
 -- macOS-style shortcuts (Cmd key mappings)
 vim.keymap.set("n", "<D-e>", ":NvimTreeToggle<CR>", { desc = "Toggle file tree (Cmd+E)" })
@@ -946,12 +1158,13 @@ vim.keymap.set("n", "<leader>t", ":ToggleTerm<CR>", { desc = "Toggle terminal" }
 vim.keymap.set("t", "<leader>t", [[<C-\><C-n>:ToggleTerm<CR]], { desc = "Close terminal" })
 vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
 
--- Smart navigation (Angular components)
+-- Smart navigation (Framework-aware)
 vim.keymap.set("n", "<leader><CR>", function()
   local filetype = vim.bo.filetype
   local word = vim.fn.expand("<cword>")
+  local framework = vim.g.current_framework
 
-  if filetype == "html" and word:match("^app%-") then
+  if framework == "angular" and filetype == "html" and word:match("^app%-") then
     -- Navigate to Angular component
     local component_name = word
       :gsub("^app%-", "")
@@ -962,6 +1175,13 @@ vim.keymap.set("n", "<leader><CR>", function()
       prompt_title = "Find Angular Component",
       search_file = search_name,
     })
+  elseif framework == "vue" and (filetype == "vue" or filetype == "javascript" or filetype == "typescript") then
+    -- Try to find Vue component
+    local component_file = word .. ".vue"
+    require("telescope.builtin").find_files({
+      prompt_title = "Find Vue Component",
+      search_file = component_file,
+    })
   else
     -- Default LSP definition
     vim.lsp.buf.definition()
@@ -971,6 +1191,7 @@ end, { desc = "Go to definition (smart)" })
 -- Comment toggling
 vim.keymap.set("v", "<leader>/", "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
 
+-- Git conflict resolution
 vim.keymap.set("n", "<leader>g", function()
   local choices = {
     { label = "✅ Keep Current (ours)", command = "GitConflictChooseOurs" },
@@ -991,6 +1212,7 @@ vim.keymap.set("n", "<leader>g", function()
   end)
 end, { noremap = true, silent = true, desc = "Resolve Git Conflict" })
 
+-- File manager action menu
 vim.keymap.set("n", "<leader>j", function()
   local api = require("nvim-tree.api")
 
@@ -1014,3 +1236,7 @@ vim.keymap.set("n", "<leader>j", function()
     end
   end)
 end, { desc = "📦 File/folder action menu" })
+
+-- Framework switching shortcuts (changed to avoid conflict with <leader>f)
+vim.keymap.set("n", "<leader>la", ":Framework angular<CR>", { desc = "Switch to Angular", nowait = true })
+vim.keymap.set("n", "<leader>lv", ":Framework vue<CR>", { desc = "Switch to Vue", nowait = true })
