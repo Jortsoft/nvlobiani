@@ -250,6 +250,279 @@ end, {
 })
 
 -- ===================================================================
+-- GIT CHANGES VIEWER WITH DISCARD OPTIONS
+-- ===================================================================
+
+-- Function to show git changes in a floating window
+local function show_git_changes()
+  -- Get git status
+  local git_status = vim.fn.systemlist("git status --porcelain")
+  
+  if #git_status == 0 then
+    vim.notify("✨ No changes in working directory", vim.log.levels.INFO)
+    return
+  end
+  
+  -- Parse git status
+  local changes = {}
+  for _, line in ipairs(git_status) do
+    local status = line:sub(1, 2)
+    local file = line:sub(4)
+    
+    local status_text = ""
+    if status:match("M") then
+      status_text = "Modified"
+    elseif status:match("A") then
+      status_text = "Added"
+    elseif status:match("D") then
+      status_text = "Deleted"
+    elseif status:match("R") then
+      status_text = "Renamed"
+    elseif status:match("??") then
+      status_text = "Untracked"
+    else
+      status_text = "Changed"
+    end
+    
+    table.insert(changes, {
+      file = file,
+      status = status,
+      status_text = status_text
+    })
+  end
+  
+  -- Create choices for selection
+  local choices = {}
+  for _, change in ipairs(changes) do
+    table.insert(choices, {
+      label = string.format("[%s] %s", change.status_text, change.file),
+      file = change.file,
+      status = change.status
+    })
+  end
+  
+  -- Add option to discard all
+  table.insert(choices, {
+    label = "🗑️ Discard ALL changes",
+    action = "discard_all"
+  })
+  
+  table.insert(choices, {
+    label = "❌ Cancel",
+    action = "cancel"
+  })
+  
+  -- Show selection menu
+  vim.ui.select(choices, {
+    prompt = "Select file to view/discard changes:",
+    format_item = function(item)
+      return item.label
+    end,
+  }, function(choice)
+    if not choice then return end
+    
+    if choice.action == "cancel" then
+      return
+    elseif choice.action == "discard_all" then
+      -- Confirm before discarding all
+      vim.ui.select(
+        { "Yes, discard all", "No, cancel" },
+        { prompt = "⚠️ Discard ALL changes? This cannot be undone!" },
+        function(confirm)
+          if confirm == "Yes, discard all" then
+            vim.fn.system("git checkout -- .")
+            vim.fn.system("git clean -fd")
+            vim.notify("🗑️ All changes discarded", vim.log.levels.WARN)
+            vim.cmd("checktime")  -- Reload all buffers
+          end
+        end
+      )
+    else
+      -- Show diff for selected file
+      show_file_diff(choice.file, choice.status)
+    end
+  end)
+end
+
+-- Function to show diff for a specific file
+function show_file_diff(file, status)
+  if status:match("??") then
+    -- For untracked files, show content
+    local content = vim.fn.readfile(file)
+    
+    -- Create floating window to show content
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(buf, 'filetype', vim.fn.fnamemodify(file, ':e'))
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    
+    local width = math.min(100, vim.o.columns - 10)
+    local height = math.min(30, vim.o.lines - 10)
+    
+    local win = vim.api.nvim_open_win(buf, true, {
+      relative = "editor",
+      width = width,
+      height = height,
+      col = (vim.o.columns - width) / 2,
+      row = (vim.o.lines - height) / 2,
+      style = "minimal",
+      border = "rounded",
+      title = " 📄 Untracked: " .. file .. " ",
+      title_pos = "center"
+    })
+    
+    -- Set keymaps for the floating window
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'd', '', {
+      noremap = true,
+      silent = true,
+      callback = function()
+        vim.ui.select(
+          { "Yes, delete file", "No, keep file" },
+          { prompt = "Delete untracked file?" },
+          function(confirm)
+            if confirm == "Yes, delete file" then
+              vim.fn.delete(file)
+              vim.notify("🗑️ Deleted: " .. file, vim.log.levels.WARN)
+              vim.api.nvim_win_close(win, true)
+              show_git_changes()  -- Refresh the list
+            end
+          end
+        )
+      end,
+      desc = "Delete untracked file"
+    })
+    
+    vim.notify("Press 'q' to close, 'd' to delete file", vim.log.levels.INFO)
+  else
+    -- For tracked files, show git diff
+    local diff = vim.fn.systemlist("git diff " .. file)
+    
+    if #diff == 0 then
+      diff = vim.fn.systemlist("git diff --cached " .. file)
+    end
+    
+    if #diff == 0 then
+      vim.notify("No changes to display for " .. file, vim.log.levels.INFO)
+      return
+    end
+    
+    -- Create floating window for diff
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, diff)
+    vim.api.nvim_buf_set_option(buf, 'filetype', 'diff')
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    
+    local width = math.min(100, vim.o.columns - 10)
+    local height = math.min(30, vim.o.lines - 10)
+    
+    local win = vim.api.nvim_open_win(buf, true, {
+      relative = "editor",
+      width = width,
+      height = height,
+      col = (vim.o.columns - width) / 2,
+      row = (vim.o.lines - height) / 2,
+      style = "minimal",
+      border = "rounded",
+      title = " 🔍 Changes: " .. file .. " ",
+      title_pos = "center"
+    })
+    
+    -- Set keymaps for the floating window
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'd', '', {
+      noremap = true,
+      silent = true,
+      callback = function()
+        vim.ui.select(
+          { "Yes, discard changes", "No, keep changes" },
+          { prompt = "Discard changes to " .. file .. "?" },
+          function(confirm)
+            if confirm == "Yes, discard changes" then
+              vim.fn.system("git checkout -- " .. vim.fn.shellescape(file))
+              vim.notify("🗑️ Changes discarded: " .. file, vim.log.levels.WARN)
+              vim.api.nvim_win_close(win, true)
+              
+              -- Reload the file if it's open
+              for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
+                if vim.api.nvim_buf_get_name(buf_id):match(file) then
+                  vim.api.nvim_buf_call(buf_id, function()
+                    vim.cmd("edit!")
+                  end)
+                end
+              end
+              
+              show_git_changes()  -- Refresh the list
+            end
+          end
+        )
+      end,
+      desc = "Discard changes"
+    })
+    
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'D', '', {
+      noremap = true,
+      silent = true,
+      callback = function()
+        vim.fn.system("git checkout -- " .. vim.fn.shellescape(file))
+        vim.notify("🗑️ Changes discarded: " .. file, vim.log.levels.WARN)
+        vim.api.nvim_win_close(win, true)
+        
+        -- Reload the file if it's open
+        for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_get_name(buf_id):match(file) then
+            vim.api.nvim_buf_call(buf_id, function()
+              vim.cmd("edit!")
+            end)
+          end
+        end
+        
+        show_git_changes()  -- Refresh the list
+      end,
+      desc = "Discard without confirmation"
+    })
+    
+    vim.notify("Press 'q' to close, 'd' to discard (with confirm), 'D' to discard immediately", vim.log.levels.INFO)
+  end
+end
+
+-- Create commands for git operations
+vim.api.nvim_create_user_command("ShowChanges", show_git_changes, { desc = "Show git changes with discard options" })
+vim.api.nvim_create_user_command("GitChanges", show_git_changes, { desc = "Show git changes with discard options" })
+
+vim.api.nvim_create_user_command("DiscardAll", function()
+  vim.ui.select(
+    { "Yes, discard all", "No, cancel" },
+    { prompt = "⚠️ Discard ALL changes? This cannot be undone!" },
+    function(confirm)
+      if confirm == "Yes, discard all" then
+        vim.fn.system("git checkout -- .")
+        vim.fn.system("git clean -fd")
+        vim.notify("🗑️ All changes discarded", vim.log.levels.WARN)
+        vim.cmd("checktime")  -- Reload all buffers
+      end
+    end
+  )
+end, { desc = "Discard all git changes" })
+
+vim.api.nvim_create_user_command("DiscardFile", function()
+  local file = vim.fn.expand("%:p")
+  local relative_file = vim.fn.fnamemodify(file, ":.")
+  
+  vim.ui.select(
+    { "Yes, discard changes", "No, keep changes" },
+    { prompt = "Discard changes to " .. relative_file .. "?" },
+    function(confirm)
+      if confirm == "Yes, discard changes" then
+        vim.fn.system("git checkout -- " .. vim.fn.shellescape(relative_file))
+        vim.notify("🗑️ Changes discarded: " .. relative_file, vim.log.levels.WARN)
+        vim.cmd("edit!")  -- Reload current buffer
+      end
+    end
+  )
+end, { desc = "Discard changes in current file" })
+
+-- ===================================================================
 -- CUSTOM COMMANDS
 -- ===================================================================
 
@@ -1136,8 +1409,25 @@ end, { desc = "Fix all issues (Cmd+I)" })
 
 -- Save and format
 vim.keymap.set("n", "<leader>s", function()
+  -- Format current buffer
   vim.lsp.buf.format({ async = false })
-  vim.cmd("wall")
+  
+  -- Save only modified, writable buffers
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_buf_get_option(buf, "modified") then
+      local readonly = vim.api.nvim_buf_get_option(buf, "readonly")
+      local buftype = vim.api.nvim_buf_get_option(buf, "buftype")
+      
+      -- Only save normal buffers that are not readonly
+      if not readonly and buftype == "" then
+        vim.api.nvim_buf_call(buf, function()
+          vim.cmd("silent write")
+        end)
+      end
+    end
+  end
+  
+  vim.notify("✅ Formatted and saved all files", vim.log.levels.INFO)
 end, { desc = "Format and save all files" })
 
 -- Undo/redo
@@ -1190,6 +1480,11 @@ end, { desc = "Go to definition (smart)" })
 
 -- Comment toggling
 vim.keymap.set("v", "<leader>/", "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
+
+-- Git operations
+vim.keymap.set("n", "<leader>gs", ":ShowChanges<CR>", { desc = "Show git changes", nowait = true })
+vim.keymap.set("n", "<leader>gd", ":DiscardFile<CR>", { desc = "Discard current file changes", nowait = true })
+vim.keymap.set("n", "<leader>gD", ":DiscardAll<CR>", { desc = "Discard ALL changes", nowait = true })
 
 -- Git conflict resolution
 vim.keymap.set("n", "<leader>g", function()
