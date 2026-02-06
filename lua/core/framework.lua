@@ -37,7 +37,7 @@ local function set_framework(framework)
     pcall(vim.cmd, "silent! Lazy load yats.vim emmet-vim")
     vim.lsp.stop_client(vim.lsp.get_active_clients())
     pcall(function() require("lsp.angular").setup() end)
-    vim.notify("🅰️ Switched to Angular framework", vim.log.levels.INFO)
+    vim.notify("Switched to Angular framework", vim.log.levels.INFO)
   elseif framework == "vue" then
     vim.g.current_framework = "vue"
     vim.cmd("augroup AngularSetup | autocmd! | augroup END")
@@ -46,9 +46,9 @@ local function set_framework(framework)
     pcall(vim.cmd, "silent! Lazy load vim-vue emmet-vim")
     vim.lsp.stop_client(vim.lsp.get_active_clients())
     pcall(function() require("lsp.vue").setup() end)
-    vim.notify("✌️ Switched to Vue framework", vim.log.levels.INFO)
+    vim.notify("Switched to Vue framework", vim.log.levels.INFO)
   else
-    vim.notify("❌ Unknown framework: " .. framework, vim.log.levels.ERROR)
+    vim.notify("Unknown framework: " .. framework, vim.log.levels.ERROR)
   end
 end
 
@@ -65,7 +65,7 @@ function M.setup()
         elseif vim.g.current_framework == "vue" then
           pcall(vim.cmd, "silent! Lazy load vim-vue emmet-vim")
         end
-        vim.notify(string.format("🚀 Framework: %s", vim.g.current_framework:upper()), vim.log.levels.INFO)
+        vim.notify(string.format("Framework: %s", vim.g.current_framework:upper()), vim.log.levels.INFO)
       end, 100)
     end,
     desc = "Initialize framework plugins on startup",
@@ -85,9 +85,11 @@ function M.setup()
     if lang == "angular" or lang == "vue" then
       set_framework(lang)
     elseif lang == "unity" then
-      require("lsp.unity").setup()
-      pcall(vim.cmd, "LspStart omnisharp")
-      vim.notify("🎮 Unity / C# LSP enabled (OmniSharp)", vim.log.levels.INFO)
+      local ok = require("lsp.unity").setup()
+      if ok then
+        pcall(vim.cmd, "LspStart omnisharp")
+        vim.notify("Unity / C# LSP enabled (OmniSharp)", vim.log.levels.INFO)
+      end
     else
       vim.notify("Unknown language: " .. lang, vim.log.levels.ERROR)
     end
