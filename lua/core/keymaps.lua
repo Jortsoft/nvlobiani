@@ -2,6 +2,9 @@ local M = {}
 
 function M.setup()
   local map = vim.keymap.set
+  local sysname = vim.loop.os_uname().sysname
+  local is_mac = sysname == "Darwin"
+  local is_win = sysname:match("Windows") or sysname:match("Win")
 
   -- File / search
   map("n", "<leader>f", ":Telescope find_files<CR>", { desc = "Find files", nowait = true })
@@ -10,15 +13,25 @@ function M.setup()
   map("n", "<leader>ff", ":Telescope live_grep<CR>", { desc = "Live grep", nowait = true })
   map("n", "<leader>l", ":Telescope current_buffer_fuzzy_find<CR>", { desc = "Search in buffer", nowait = true })
 
-  -- macOS style
-  map("n", "<D-e>", ":NvimTreeToggle<CR>", { desc = "Toggle file tree (Cmd+E)" })
-  map("n", "<D-f>", ":Telescope find_files<CR>", { desc = "Find files (Cmd+F)" })
+  -- macOS / Windows style
+  if is_mac then
+    map("n", "<D-e>", ":NvimTreeToggle<CR>", { desc = "Toggle file tree (Cmd+E)" })
+    map("n", "<D-f>", ":Telescope find_files<CR>", { desc = "Find files (Cmd+F)" })
+  elseif is_win then
+    map("n", "<C-e>", ":NvimTreeToggle<CR>", { desc = "Toggle file tree (Ctrl+E)" })
+    map("n", "<C-f>", ":Telescope find_files<CR>", { desc = "Find files (Ctrl+F)" })
+  end
 
   -- Buffers
   map("n", "<A-,>", ":BufferLineCyclePrev<CR>", { desc = "Prev buffer" })
   map("n", "<A-.>", ":BufferLineCycleNext<CR>", { desc = "Next buffer" })
-  map("n", "<D-,>", ":BufferLineCyclePrev<CR>", { desc = "Prev buffer (Cmd+,)" })
-  map("n", "<D-.>", ":BufferLineCycleNext<CR>", { desc = "Next buffer (Cmd+.)" })
+  if is_mac then
+    map("n", "<D-,>", ":BufferLineCyclePrev<CR>", { desc = "Prev buffer (Cmd+,)" })
+    map("n", "<D-.>", ":BufferLineCycleNext<CR>", { desc = "Next buffer (Cmd+.)" })
+  elseif is_win then
+    map("n", "<C-,>", ":BufferLineCyclePrev<CR>", { desc = "Prev buffer (Ctrl+,)" })
+    map("n", "<C-.>", ":BufferLineCycleNext<CR>", { desc = "Next buffer (Ctrl+.)" })
+  end
   map("n", "<leader>p", "<C-^>", { desc = "Toggle last buffer" })
 
   -- Save + format all
