@@ -54,6 +54,7 @@ NvLobiani is a Vim-based code editor for web and full-stack developers.
 |  ☾ Dark theme         | `:Theme githubdark`                    |
 | ☀️ Light theme        | `:Theme onelight`                      |
 | 🔄 Reload vim         | `:Reload`                              |
+| 🧑🏻‍💻 Set LTS            | `:SetLanguage angular, vue, unity`     |
 
 
 ## ✨ Features
