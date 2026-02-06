@@ -134,13 +134,16 @@ function M.setup()
     },
 
     -- Themes
-    { "bluz71/vim-moonfly-colors", name = "moonfly", lazy = false, priority = 1000,
-      config = function() vim.cmd("colorscheme moonfly") end },
+    { "bluz71/vim-moonfly-colors", name = "moonfly", lazy = false, priority = 1000 },
+    { "ellisonleao/gruvbox.nvim", name = "gruvbox", lazy = false, priority = 1000 },
     { "folke/tokyonight.nvim", name = "tokyonight", lazy = false, priority = 1000 },
     { "scottmckendry/cyberdream.nvim", name = "cyberdream", lazy = false, priority = 1000 },
     { "projekt0n/github-nvim-theme", name = "github-theme", lazy = false, priority = 1000 },
     { "navarasu/onedark.nvim", priority = 1000,
       config = function()
+        require("gruvbox").setup({})
+        vim.cmd("colorscheme gruvbox")
+
         vim.api.nvim_create_user_command("Theme", function(opts)
           local style = opts.args:lower()
 
@@ -155,6 +158,9 @@ function M.setup()
           elseif style == "tokyonight" then
             require("tokyonight").setup({})
             vim.cmd("colorscheme tokyonight")
+          elseif style == "gruvbox" then
+            require("gruvbox").setup({})
+            vim.cmd("colorscheme gruvbox")
           elseif style == "githubdark" or style == "github-dark" then
             require("github-theme").setup({ options = { darken = { floats = false } } })
             vim.cmd("colorscheme github_dark")
@@ -221,7 +227,7 @@ function M.setup()
       version = "*",
       config = function()
         local sys = vim.loop.os_uname().sysname
-        local shell = sys == "Windows_NT" and "powershell.exe" or "/bin/bash"
+        local shell = sys == "Windows_NT" and "cmd.exe" or "/bin/bash"
         require("toggleterm").setup({
           direction = "float",
           float_opts = { border = "rounded", winblend = 0 },

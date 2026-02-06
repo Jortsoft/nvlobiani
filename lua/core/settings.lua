@@ -12,6 +12,12 @@ function M.setup()
   vim.opt.showtabline = 2
   vim.opt.timeoutlen = 300
   vim.opt.ttimeoutlen = 0
+  local sys = vim.loop.os_uname().sysname
+  if sys == "Windows_NT" then
+    vim.o.shell = "cmd.exe"
+    vim.o.shellcmdflag = "/c"
+    vim.o.shellxquote = "\""
+  end
 
   -- Disable unused providers
   vim.g.loaded_perl_provider = 0
