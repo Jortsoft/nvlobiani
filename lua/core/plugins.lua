@@ -15,6 +15,8 @@ function M.setup()
   end
   vim.opt.rtp:prepend(lazypath)
 
+  local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
+
   require("lazy").setup({
     -- =========================
     -- UI & Appearance
@@ -252,6 +254,7 @@ function M.setup()
     -- =========================
     {
       "nvim-treesitter/nvim-treesitter",
+      enabled = function() return not is_windows end,
       build = ":TSUpdate",
       config = function()
         require("nvim-treesitter.configs").setup({
