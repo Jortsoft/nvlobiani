@@ -19,7 +19,7 @@ local break_messages = {
   {
     "🚀 Coding power at 1%.",
     "🔋 Please charge with fresh air.",
-    "😮‍💨 Alt+F4 life temporarily.",
+    "😮‍💨 Go fuck someone...",
   },
 }
 

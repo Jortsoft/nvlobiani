@@ -153,6 +153,14 @@ function M.setup()
   -- Comment toggling (visual)
   map("v", "<leader>/", "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
 
+  -- Auto import / organize imports (Angular/Vue/Unity/TS/JS/C#)
+  map({ "n", "v" }, "<leader>i", function()
+    vim.lsp.buf.code_action({
+      apply = true,
+      context = { only = { "source.addMissingImports", "source.organizeImports" } },
+    })
+  end, { desc = "Auto import / organize imports" })
+
   -- File manager action menu
   map("n", "<leader>j", function()
     local ok, api = pcall(require, "nvim-tree.api")
