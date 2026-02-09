@@ -12,6 +12,16 @@ function M.setup()
   vim.opt.showtabline = 2
   vim.opt.timeoutlen = 300
   vim.opt.ttimeoutlen = 0
+
+  -- Avoid swapfile prompts; disable swap for C# buffers
+  vim.opt.shortmess:append("A")
+  vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+    pattern = { "*.cs" },
+    callback = function()
+      vim.opt_local.swapfile = false
+    end,
+    desc = "Disable swapfile for C#",
+  })
   local sys = vim.loop.os_uname().sysname
   if sys == "Windows_NT" then
     vim.o.shell = "cmd.exe"
