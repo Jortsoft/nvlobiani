@@ -56,6 +56,9 @@ function M.setup()
   -- Init with Angular by default
   setup_angular_autocmds()
 
+  -- Auto-start Unity LSP when opening C# files inside a Unity project
+  pcall(function() require("lsp.unity").autostart() end)
+
   -- Auto-initialize framework on startup (lazy-load framework plugins)
   vim.api.nvim_create_autocmd("VimEnter", {
     callback = function()
@@ -85,9 +88,8 @@ function M.setup()
     if lang == "angular" or lang == "vue" then
       set_framework(lang)
     elseif lang == "unity" then
-      local ok = require("lsp.unity").setup()
+      local ok = require("lsp.unity").start_for_buffer(0)
       if ok then
-        pcall(vim.cmd, "LspStart omnisharp")
         vim.notify("Unity / C# LSP enabled (OmniSharp)", vim.log.levels.INFO)
       end
     else
