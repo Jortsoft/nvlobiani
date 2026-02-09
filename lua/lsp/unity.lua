@@ -1,8 +1,10 @@
 -- lua/lsp/unity.lua
 local M = {}
 
-local lsp = require("lspconfig")
 local common = require("lsp.common")
+
+local configured = false
+local client_config = nil
 
 -- Find correct OmniSharp command. Returns cmd list or nil.
 local function find_omnisharp_cmd()
@@ -99,6 +101,10 @@ end
 
 -- Find Unity project root
 local function unity_root(fname)
+  if not fname or fname == "" then
+    return nil
+  end
+
   local project_settings = vim.fs.find("ProjectSettings/ProjectSettings.asset", { upward = true, path = fname })[1]
   if project_settings then
     return vim.fs.dirname(vim.fs.dirname(project_settings))
@@ -128,10 +134,33 @@ local function unity_root(fname)
     return vim.fs.dirname(csproj)
   end
 
-  return vim.fn.getcwd()
+  return nil
+end
+
+local function ensure_cs_buf(bufnr)
+  bufnr = bufnr or 0
+  if vim.bo[bufnr].filetype ~= "cs" then
+    return false, "Not a C# buffer"
+  end
+
+  local fname = vim.api.nvim_buf_get_name(bufnr)
+  if fname == "" then
+    return false, "Buffer has no file path (save the file first)"
+  end
+
+  local root = unity_root(fname)
+  if not root then
+    return false, "Unity project root not found (open inside a Unity project)"
+  end
+
+  return true, root
 end
 
 function M.setup()
+  if configured then
+    return true
+  end
+
   local omnisharp_cmd = find_omnisharp_cmd()
   if not omnisharp_cmd then
     vim.notify(
@@ -147,18 +176,25 @@ function M.setup()
     return false
   end
 
-  lsp.omnisharp.setup({
+  local caps = vim.deepcopy(common.capabilities or {})
+  caps.workspace = caps.workspace or {}
+  caps.workspace.workspaceFolders = false
+
+  client_config = {
+    name = "omnisharp",
     cmd = vim.tbl_flatten({
       omnisharp_cmd,
+      "-z",
       "--languageserver",
       "--hostPID",
       tostring(vim.fn.getpid()),
+      "DotNet:enablePackageRestore=false",
       "--unity",
       "--encoding",
       "utf-8",
     }),
 
-    capabilities = common.capabilities,
+    capabilities = caps,
     on_attach = function(client, bufnr)
       client.server_capabilities.documentFormattingProvider = true
       client.server_capabilities.documentRangeFormattingProvider = true
@@ -168,12 +204,61 @@ function M.setup()
 
     root_dir = unity_root,
 
-    enable_roslyn_analyzers = true,
-    enable_import_completion = true,
-    organize_imports_on_format = true,
-  })
+    settings = {
+      FormattingOptions = {
+        EnableEditorConfigSupport = true,
+        OrganizeImports = true,
+      },
+      MsBuild = {},
+      RoslynExtensionsOptions = {
+        EnableAnalyzersSupport = true,
+        EnableImportCompletion = true,
+      },
+      Sdk = {
+        IncludePrereleases = true,
+      },
+    },
+  }
+
+  configured = true
+  return true
+end
+
+function M.start_for_buffer(bufnr, opts)
+  local ok, info = ensure_cs_buf(bufnr)
+  if not ok then
+    if not (opts and opts.silent) then
+      vim.notify("Unity LSP: " .. info, vim.log.levels.WARN)
+    end
+    return false
+  end
+
+  if not M.setup() then
+    return false
+  end
+
+  local cfg = vim.deepcopy(client_config or {})
+  cfg.root_dir = info
+
+  local client_id = vim.lsp.start(cfg, { bufnr = bufnr or 0 })
+  if not client_id then
+    vim.notify("Unity LSP: failed to start OmniSharp", vim.log.levels.ERROR)
+    return false
+  end
 
   return true
+end
+
+function M.autostart()
+  local group = vim.api.nvim_create_augroup("UnityLspAuto", { clear = true })
+  vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile", "FileType" }, {
+    group = group,
+    pattern = { "*.cs", "cs" },
+    callback = function(args)
+      M.start_for_buffer(args.buf, { silent = true })
+    end,
+    desc = "Auto-start OmniSharp for Unity projects",
+  })
 end
 
 return M
