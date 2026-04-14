@@ -53,98 +53,189 @@ local function setup_break_timer()
   timer:start(40 * 60 * 1000, 40 * 60 * 1000, vim.schedule_wrap(show_break_message))
 end
 
--- Git wrappers (simplified from your original)
-local function show_git_changes()
-  local git_status = vim.fn.systemlist("git status --porcelain")
-
-  if #git_status == 0 then
-    vim.notify("✨ No changes in working directory", vim.log.levels.INFO)
+local function open_path_in_system(path)
+  if not path or path == "" then
+    vim.notify("Nothing to open", vim.log.levels.WARN)
     return
   end
 
-  local changes = {}
-  for _, line in ipairs(git_status) do
-    local status = line:sub(1, 2)
-    local file = line:sub(4)
+  local expanded = vim.fn.fnamemodify(vim.fn.expand(path), ":p")
 
-    local status_text = "Changed"
-    if status:match("M") then status_text = "Modified"
-    elseif status:match("A") then status_text = "Added"
-    elseif status:match("D") then status_text = "Deleted"
-    elseif status:match("R") then status_text = "Renamed"
-    elseif status:match("??") then status_text = "Untracked" end
-
-    table.insert(changes, {
-      label = string.format("[%s] %s", status_text, file),
-      file = file,
-      status = status,
-      action = "file",
-    })
+  if vim.ui and vim.ui.open then
+    local ok, cmd_or_nil, err_or_nil = pcall(vim.ui.open, expanded)
+    if ok and cmd_or_nil then
+      return
+    end
+    if ok and err_or_nil then
+      vim.notify("System open failed: " .. tostring(err_or_nil), vim.log.levels.WARN)
+    elseif not ok then
+      vim.notify("System open failed: " .. tostring(cmd_or_nil), vim.log.levels.WARN)
+    end
   end
 
-  table.insert(changes, { label = "🗑️ Discard ALL changes", action = "discard_all" })
-  table.insert(changes, { label = "❌ Cancel", action = "cancel" })
+  local sys = vim.loop.os_uname().sysname
+  local cmd = nil
+  if sys == "Darwin" then
+    cmd = { "open", expanded }
+  elseif sys == "Windows_NT" or sys:match("Windows") then
+    cmd = { "cmd", "/c", "start", "", expanded }
+  else
+    cmd = { "xdg-open", expanded }
+  end
 
-  vim.ui.select(changes, {
-    prompt = "Select file to view/discard:",
-    format_item = function(item) return item.label end,
-  }, function(choice)
-    if not choice or choice.action == "cancel" then return end
+  local jid = vim.fn.jobstart(cmd, { detach = true })
+  if jid <= 0 then
+    vim.notify("Could not open in system: " .. expanded, vim.log.levels.ERROR)
+  end
+end
 
-    if choice.action == "discard_all" then
-      vim.ui.select(
-        { "Yes, discard all", "No, cancel" },
-        { prompt = "⚠️ Discard ALL changes? This cannot be undone!" },
-        function(confirm)
-          if confirm == "Yes, discard all" then
-            vim.fn.system("git checkout -- .")
-            vim.fn.system("git clean -fd")
-            vim.notify("🗑️ All changes discarded", vim.log.levels.WARN)
-            vim.cmd("checktime")
+local function detect_open_target(arg)
+  if arg and arg ~= "" then
+    return arg
+  end
+
+  if vim.bo.filetype == "NvimTree" then
+    local ok, api = pcall(require, "nvim-tree.api")
+    if ok and api and api.tree and api.tree.get_node_under_cursor then
+      local node = api.tree.get_node_under_cursor()
+      if node then
+        return node.absolute_path or node.link_to or node.name
+      end
+    end
+  end
+
+  local current = vim.api.nvim_buf_get_name(0)
+  if current and current ~= "" then
+    return current
+  end
+
+  return vim.loop.cwd()
+end
+
+local function open_selected_in_system(arg)
+  local target = detect_open_target(arg)
+  open_path_in_system(target)
+end
+
+-- Git wrappers (simplified from your original)
+local function git_root()
+  local out = vim.fn.systemlist({ "git", "rev-parse", "--show-toplevel" })
+  if vim.v.shell_error ~= 0 or #out == 0 then
+    return nil
+  end
+  return out[1]
+end
+
+local function rel_from_root(root, abs)
+  if not root or not abs then
+    return nil
+  end
+
+  if vim.fs and vim.fs.relpath then
+    local rel = vim.fs.relpath(root, abs)
+    if rel then
+      return rel
+    end
+  end
+
+  local prefix = root .. "/"
+  if abs:sub(1, #prefix) == prefix then
+    return abs:sub(#prefix + 1)
+  end
+  return abs
+end
+
+local function open_git_diff_view(entry)
+  local root = git_root()
+  if not root then
+    vim.notify("Not inside a git repository", vim.log.levels.WARN)
+    return
+  end
+
+  local abs = entry.path or vim.fn.fnamemodify(entry.value, ":p")
+  local rel = rel_from_root(root, abs)
+  if not rel then
+    vim.notify("Unable to resolve selected file path", vim.log.levels.WARN)
+    return
+  end
+
+  local head_lines = vim.fn.systemlist({ "git", "-C", root, "--no-pager", "show", "HEAD:" .. rel })
+  local has_head = vim.v.shell_error == 0
+  if not has_head then
+    head_lines = {}
+  end
+
+  local work_lines = {}
+  if vim.uv.fs_stat(abs) then
+    work_lines = vim.fn.readfile(abs)
+  end
+
+  local ft = vim.filetype.match({ filename = abs }) or ""
+
+  vim.cmd("tabnew")
+
+  local right = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_set_lines(right, 0, -1, false, work_lines)
+  vim.api.nvim_buf_set_name(right, "WORKTREE:" .. rel)
+  vim.bo[right].buftype = "nofile"
+  vim.bo[right].bufhidden = "wipe"
+  vim.bo[right].swapfile = false
+  vim.bo[right].modifiable = false
+  vim.bo[right].readonly = true
+  if ft ~= "" then
+    vim.bo[right].filetype = ft
+  end
+
+  vim.cmd("leftabove vnew")
+  local left = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_set_lines(left, 0, -1, false, head_lines)
+  vim.api.nvim_buf_set_name(left, "HEAD:" .. rel)
+  vim.bo[left].buftype = "nofile"
+  vim.bo[left].bufhidden = "wipe"
+  vim.bo[left].swapfile = false
+  vim.bo[left].modifiable = false
+  vim.bo[left].readonly = true
+  if ft ~= "" then
+    vim.bo[left].filetype = ft
+  end
+
+  vim.cmd("diffthis")
+  vim.cmd("wincmd l")
+  vim.cmd("diffthis")
+
+  vim.keymap.set("n", "q", "<cmd>tabclose<CR>", { buffer = left, silent = true })
+  vim.keymap.set("n", "q", "<cmd>tabclose<CR>", { buffer = right, silent = true })
+
+  if not has_head then
+    vim.notify("New file: showing against empty HEAD version", vim.log.levels.INFO)
+  end
+end
+
+local function show_git_changes()
+  local ok_b, builtin = pcall(require, "telescope.builtin")
+  local ok_a, actions = pcall(require, "telescope.actions")
+  local ok_s, action_state = pcall(require, "telescope.actions.state")
+
+  if ok_b and ok_a and ok_s then
+    builtin.git_status({
+      prompt_title = "Git Changes (Enter: open diff view)",
+      attach_mappings = function(prompt_bufnr, map)
+        local open_selected = function()
+          local selection = action_state.get_selected_entry()
+          actions.close(prompt_bufnr)
+          if selection then
+            open_git_diff_view(selection)
           end
         end
-      )
-    else
-      -- simple diff in popup
-      local diff = vim.fn.systemlist("git diff " .. choice.file)
-      if #diff == 0 then
-        vim.notify("No diff to show for " .. choice.file, vim.log.levels.INFO)
-        return
-      end
 
-      local buf = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, diff)
-      vim.api.nvim_buf_set_option(buf, "filetype", "diff")
-      local width = math.min(100, vim.o.columns - 10)
-      local height = math.min(30, vim.o.lines - 10)
-      local win = vim.api.nvim_open_win(buf, true, {
-        relative = "editor",
-        width = width,
-        height = height,
-        col = (vim.o.columns - width) / 2,
-        row = (vim.o.lines - height) / 2,
-        style = "minimal",
-        border = "rounded",
-        title = " 🔍 Changes: " .. choice.file .. " ",
-        title_pos = "center",
-      })
-      vim.keymap.set("n", "q", ":close<CR>", { buffer = buf, silent = true })
-      vim.keymap.set("n", "d", function()
-        vim.ui.select(
-          { "Yes, discard", "No" },
-          { prompt = "Discard changes to " .. choice.file .. "?" },
-          function(confirm)
-            if confirm == "Yes, discard" then
-              vim.fn.system("git checkout -- " .. vim.fn.shellescape(choice.file))
-              vim.notify("🗑️ Changes discarded: " .. choice.file, vim.log.levels.WARN)
-              vim.api.nvim_win_close(win, true)
-              vim.cmd("checktime")
-            end
-          end
-        )
-      end, { buffer = buf, silent = true })
-    end
-  end)
+        map({ "i", "n" }, "<CR>", open_selected)
+        return true
+      end,
+    })
+    return
+  end
+
+  vim.notify("Telescope not available for git change browser", vim.log.levels.WARN)
 end
 
 function M.setup()
@@ -155,6 +246,14 @@ function M.setup()
     vim.cmd("edit")
     vim.notify("🔁 Neovim config reloaded!", vim.log.levels.INFO)
   end, {})
+
+  vim.api.nvim_create_user_command("Open", function(opts)
+    open_selected_in_system(opts.args)
+  end, {
+    nargs = "?",
+    complete = "file",
+    desc = "Open selected file/folder in system app",
+  })
 
   vim.api.nvim_create_user_command("ShowChanges", show_git_changes, { desc = "Show git changes" })
   vim.keymap.set("n", "<leader>gs", ":ShowChanges<CR>", { desc = "Show git changes", nowait = true })

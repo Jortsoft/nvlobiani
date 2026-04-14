@@ -1,7 +1,7 @@
 <img width="1495" alt="Screenshot 2025-06-09 at 17 31 21" src="https://github.com/user-attachments/assets/412978b3-e083-4d5e-a1b6-1cd2ffb93a49" />
 
 # NvLobiani
-NvLobiani is a Neovim configuration for web and full‑stack development with built‑in workflows for Angular, Vue, and Unity (C#).
+NvLobiani is a Neovim configuration for web and full‑stack development with built‑in workflows for Angular, Vue, PixiJS, and Unity (C#).
 
 **Leader key:** `<Space>`
 
@@ -22,6 +22,9 @@ NvLobiani is a Neovim configuration for web and full‑stack development with bu
 
 **Optional (Unity/C#)**
 - .NET SDK (if OmniSharp uses `dotnet`)
+
+**Optional (Terminal panes in popup)**
+- tmux
 
 ---
 
@@ -76,10 +79,11 @@ nvim
 ---
 
 ## Language Setup
-NvLobiani supports Angular, Vue, and Unity. Use these commands:
+NvLobiani supports Angular, Vue, PixiJS, and Unity. Use these commands:
 
 **Commands**
-- `:Framework angular` or `:Framework vue`
+- `:Framework angular`, `:Framework vue`, or `:Framework pixi`
+- `:SetLanguage pixi`
 - `:SetLanguage unity`
 
 **Keymaps**
@@ -96,6 +100,7 @@ Then install these servers:
 - `angularls`
 - `tsserver` (or `ts_ls`)
 - `volar` (or `vue_ls`)
+- `eslint`
 - `omnisharp` (Unity/C#)
 
 **Optional npm tools**
@@ -122,8 +127,9 @@ npm i -g prettier eslint
 | Undo | `<leader><Left>` |
 | Redo | `<leader><Right>` |
 | Split same file (vertical) | `<leader>c` |
-| Cycle splits | `<leader><Up>` |
+| Cycle splits / terminal panes | `<leader><Up>` |
 | Toggle terminal | `<leader>t` |
+| Split terminal pane (tmux popup) | `<leader>m` |
 | Close terminal (terminal mode) | `<leader>t` |
 | Smart Go‑To Definition | `<leader><CR>` |
 | Comment/uncomment (visual) | `<leader>/` |
@@ -151,10 +157,12 @@ npm i -g prettier eslint
 | Action | Command |
 |---|---|
 | Reload config | `:Reload` |
+| Open in system app | `:Open` |
 | Show git changes | `:ShowChanges` |
-| Switch framework | `:Framework angular` / `:Framework vue` |
+| Switch framework | `:Framework angular` / `:Framework vue` / `:Framework pixi` |
+| Enable PixiJS | `:SetLanguage pixi` |
 | Enable Unity | `:SetLanguage unity` |
-| Theme (examples) | `:Theme onedark` / `:Theme onelight` / `:Theme gruvbox` / `:Theme moonfly` / `:Theme cyberdream` / `:Theme tokyonight` / `:Theme githubdark` |
+| Theme (examples) | `:Theme onedark` / `:Theme onelight` / `:Theme gruvbox` / `:Theme moonfly` / `:Theme cyberdream` / `:Theme tokyonight` / `:Theme wisteria` / `:Theme githubdark` |
 
 ---
 

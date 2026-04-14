@@ -1,7 +1,17 @@
 local M = {}
 
--- Angular/Vue current framework
+-- Angular/Vue/Pixi current framework
 vim.g.current_framework = vim.g.current_framework or "angular"
+
+local function setup_pixi_autocmds()
+  vim.cmd([[
+    augroup PixiSetup
+      autocmd!
+      autocmd BufRead,BufNewFile *.vert,*.frag,*.glsl set filetype=glsl
+      autocmd BufRead,BufNewFile *.wgsl set filetype=wgsl
+    augroup END
+  ]])
+end
 
 local function setup_angular_autocmds()
   vim.cmd([[
@@ -30,6 +40,7 @@ end
 local function set_framework(framework)
   framework = framework:lower()
   if framework == "angular" then
+    vim.cmd("augroup PixiSetup | autocmd! | augroup END")
     vim.g.current_framework = "angular"
     vim.cmd("augroup VueSetup | autocmd! | augroup END")
     setup_angular_autocmds()
@@ -39,6 +50,7 @@ local function set_framework(framework)
     pcall(function() require("lsp.angular").setup() end)
     vim.notify("Switched to Angular framework", vim.log.levels.INFO)
   elseif framework == "vue" then
+    vim.cmd("augroup PixiSetup | autocmd! | augroup END")
     vim.g.current_framework = "vue"
     vim.cmd("augroup AngularSetup | autocmd! | augroup END")
     setup_vue_autocmds()
@@ -47,6 +59,15 @@ local function set_framework(framework)
     vim.lsp.stop_client(vim.lsp.get_active_clients())
     pcall(function() require("lsp.vue").setup() end)
     vim.notify("Switched to Vue framework", vim.log.levels.INFO)
+  elseif framework == "pixi" then
+    vim.g.current_framework = "pixi"
+    vim.cmd("augroup AngularSetup | autocmd! | augroup END")
+    vim.cmd("augroup VueSetup | autocmd! | augroup END")
+    setup_pixi_autocmds()
+    vim.lsp.stop_client(vim.lsp.get_active_clients())
+    pcall(function() require("lsp.pixi").setup() end)
+    pcall(function() require("lsp.pixi").start_for_buffer(0, { silent = true }) end)
+    vim.notify("Switched to PixiJS framework", vim.log.levels.INFO)
   else
     vim.notify("Unknown framework: " .. framework, vim.log.levels.ERROR)
   end
@@ -67,6 +88,8 @@ function M.setup()
           pcall(vim.cmd, "silent! Lazy load yats.vim emmet-vim")
         elseif vim.g.current_framework == "vue" then
           pcall(vim.cmd, "silent! Lazy load vim-vue emmet-vim")
+        elseif vim.g.current_framework == "pixi" then
+          pcall(function() require("lsp.pixi").setup() end)
         end
         vim.notify(string.format("Framework: %s", vim.g.current_framework:upper()), vim.log.levels.INFO)
       end, 100)
@@ -74,18 +97,18 @@ function M.setup()
     desc = "Initialize framework plugins on startup",
   })
 
-  -- :Framework angular|vue
+  -- :Framework angular|vue|pixi
   vim.api.nvim_create_user_command("Framework", function(opts)
     set_framework(opts.args)
   end, {
     nargs = 1,
-    complete = function() return { "angular", "vue" } end,
+    complete = function() return { "angular", "vue", "pixi" } end,
   })
 
-  -- :SetLanguage angular|vue|unity
+  -- :SetLanguage angular|vue|pixi|unity
   vim.api.nvim_create_user_command("SetLanguage", function(opts)
     local lang = opts.args:lower()
-    if lang == "angular" or lang == "vue" then
+    if lang == "angular" or lang == "vue" or lang == "pixi" then
       set_framework(lang)
     elseif lang == "unity" then
       local ok = require("lsp.unity").start_for_buffer(0)
@@ -97,7 +120,7 @@ function M.setup()
     end
   end, {
     nargs = 1,
-    complete = function() return { "angular", "vue", "unity" } end,
+    complete = function() return { "angular", "vue", "pixi", "unity" } end,
   })
 
   -- Shortcuts
