@@ -90,8 +90,48 @@ function M.setup()
   -- Terminal
   local tmux_term = nil
 
+  local function resolve_tmux_executable()
+    if vim.fn.executable("tmux") == 1 then
+      return "tmux"
+    end
+
+    if is_win then
+      local candidates = {
+        vim.fn.expand("$LOCALAPPDATA/Microsoft/WinGet/Links/tmux.exe"),
+      }
+      for _, path in ipairs(candidates) do
+        if vim.uv.fs_stat(path) then
+          return path
+        end
+      end
+
+      local matches = vim.fn.glob(
+        vim.fn.expand("$LOCALAPPDATA/Microsoft/WinGet/Packages/arndawg.tmux-windows*/tmux.exe"),
+        false,
+        true
+      )
+      if #matches > 0 and vim.uv.fs_stat(matches[1]) then
+        return matches[1]
+      end
+    end
+
+    return nil
+  end
+
+  local function tmux_command(args)
+    local tmux_bin = resolve_tmux_executable()
+    if not tmux_bin then
+      return nil
+    end
+    if tmux_bin == "tmux" then
+      return "tmux " .. args
+    end
+    return string.format('"%s" %s', tmux_bin, args)
+  end
+
   local function ensure_tmux_terminal()
-    if vim.fn.executable("tmux") == 0 then
+    local start_cmd = tmux_command("new-session -A -s nvlobiani-popup")
+    if not start_cmd then
       return nil
     end
 
@@ -107,7 +147,7 @@ function M.setup()
 
     tmux_term = terminal.Terminal:new({
       id = 99,
-      cmd = "tmux new-session -A -s nvlobiani-popup",
+      cmd = start_cmd,
       direction = "float",
       hidden = true,
       close_on_exit = false,
@@ -124,11 +164,13 @@ function M.setup()
 
   local function toggle_terminal_popup()
     local term = ensure_tmux_terminal()
-    if not term then
-      vim.notify("tmux is required for pane-based popup terminal", vim.log.levels.WARN)
+    if term then
+      term:toggle()
       return
     end
-    term:toggle()
+
+    -- Fallback when tmux is not installed: use regular ToggleTerm.
+    vim.cmd("ToggleTerm")
   end
 
   local function tmux_send(cmd)
@@ -147,28 +189,45 @@ function M.setup()
     return true
   end
 
+  local function split_terminal()
+    -- Prefer tmux pane split when available.
+    local split_cmd = tmux_command("split-window -h")
+    if split_cmd then
+      tmux_send(split_cmd)
+      return
+    end
+
+    -- Fallback without tmux: open a vertical ToggleTerm split.
+    local ok = pcall(vim.cmd, "ToggleTerm direction=vertical")
+    if not ok then
+      vim.cmd("vsplit | terminal")
+    end
+  end
+
   map("n", "<leader><Up>", function()
     if in_tmux_popup() then
-      tmux_send("tmux select-pane -t :.+")
+      local cmd = tmux_command("select-pane -t :.+")
+      if cmd then
+        tmux_send(cmd)
+      end
     else
       vim.cmd("wincmd w")
     end
   end, { desc = "Cycle splits / tmux panes" })
 
   map("n", "<leader>t", toggle_terminal_popup, { desc = "Toggle terminal popup" })
-  map("n", "<leader>m", function()
-    tmux_send("tmux split-window -h")
-  end, { desc = "Split terminal pane" })
+  map("n", "<leader>m", split_terminal, { desc = "Split terminal pane" })
   map("t", "<leader>t", function()
     vim.cmd("stopinsert")
     toggle_terminal_popup()
   end, { desc = "Toggle terminal popup" })
-  map("t", "<leader>m", function()
-    tmux_send("tmux split-window -h")
-  end, { desc = "Split terminal pane" })
+  map("t", "<leader>m", split_terminal, { desc = "Split terminal pane" })
   map("t", "<leader><Up>", function()
     if in_tmux_popup() then
-      tmux_send("tmux select-pane -t :.+")
+      local cmd = tmux_command("select-pane -t :.+")
+      if cmd then
+        tmux_send(cmd)
+      end
     else
       vim.cmd("stopinsert")
       vim.cmd("wincmd w")
