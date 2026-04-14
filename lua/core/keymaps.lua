@@ -87,11 +87,93 @@ function M.setup()
     vim.cmd("vsplit " .. current)
   end, { desc = "Vertical split same file" })
 
-  map("n", "<leader><Up>", "<C-w>w", { desc = "Cycle splits" })
-
   -- Terminal
-  map("n", "<leader>t", ":ToggleTerm<CR>", { desc = "Toggle terminal" })
-  map("t", "<leader>t", [[<C-\><C-n>:ToggleTerm<CR>]], { desc = "Close terminal" })
+  local tmux_term = nil
+
+  local function ensure_tmux_terminal()
+    if vim.fn.executable("tmux") == 0 then
+      return nil
+    end
+
+    if tmux_term and tmux_term.bufnr and vim.api.nvim_buf_is_valid(tmux_term.bufnr) then
+      return tmux_term
+    end
+
+    local ok, terminal = pcall(require, "toggleterm.terminal")
+    if not ok then
+      vim.notify("toggleterm not loaded", vim.log.levels.WARN)
+      return nil
+    end
+
+    tmux_term = terminal.Terminal:new({
+      id = 99,
+      cmd = "tmux new-session -A -s nvlobiani-popup",
+      direction = "float",
+      hidden = true,
+      close_on_exit = false,
+    })
+    return tmux_term
+  end
+
+  local function in_tmux_popup()
+    return tmux_term
+      and tmux_term.bufnr
+      and vim.api.nvim_get_current_buf() == tmux_term.bufnr
+      and tmux_term:is_open()
+  end
+
+  local function toggle_terminal_popup()
+    local term = ensure_tmux_terminal()
+    if not term then
+      vim.notify("tmux is required for pane-based popup terminal", vim.log.levels.WARN)
+      return
+    end
+    term:toggle()
+  end
+
+  local function tmux_send(cmd)
+    local term = ensure_tmux_terminal()
+    if not term then
+      vim.notify("tmux is required for pane-based popup terminal", vim.log.levels.WARN)
+      return false
+    end
+
+    if not term:is_open() then
+      term:open()
+    end
+    term:send(cmd, false)
+    term:focus()
+    vim.cmd("startinsert")
+    return true
+  end
+
+  map("n", "<leader><Up>", function()
+    if in_tmux_popup() then
+      tmux_send("tmux select-pane -t :.+")
+    else
+      vim.cmd("wincmd w")
+    end
+  end, { desc = "Cycle splits / tmux panes" })
+
+  map("n", "<leader>t", toggle_terminal_popup, { desc = "Toggle terminal popup" })
+  map("n", "<leader>m", function()
+    tmux_send("tmux split-window -h")
+  end, { desc = "Split terminal pane" })
+  map("t", "<leader>t", function()
+    vim.cmd("stopinsert")
+    toggle_terminal_popup()
+  end, { desc = "Toggle terminal popup" })
+  map("t", "<leader>m", function()
+    tmux_send("tmux split-window -h")
+  end, { desc = "Split terminal pane" })
+  map("t", "<leader><Up>", function()
+    if in_tmux_popup() then
+      tmux_send("tmux select-pane -t :.+")
+    else
+      vim.cmd("stopinsert")
+      vim.cmd("wincmd w")
+    end
+  end, { desc = "Cycle splits / tmux panes" })
   map("t", "<Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
 
   -- Smart navigation (Angular/Vue/Unity)
@@ -172,6 +254,7 @@ function M.setup()
     local actions = {
       { label = "📄 Rename", fn = api.fs.rename },
       { label = "➕ Create", fn = api.fs.create },
+      { label = "🖥️ Open in System", fn = function() vim.cmd("Open") end },
       { label = "🗑️ Delete", fn = api.fs.remove },
       { label = "📁 Move", fn = api.fs.cut },
       { label = "📋 Copy", fn = api.fs.copy.node },

@@ -139,15 +139,30 @@ function M.setup()
     { "folke/tokyonight.nvim", name = "tokyonight", lazy = false, priority = 1000 },
     { "scottmckendry/cyberdream.nvim", name = "cyberdream", lazy = false, priority = 1000 },
     { "projekt0n/github-nvim-theme", name = "github-theme", lazy = false, priority = 1000 },
+    { "masisz/wisteria.nvim", name = "wisteria", lazy = false, priority = 1000 },
     { "navarasu/onedark.nvim", priority = 1000,
       config = function()
         require("gruvbox").setup({})
         vim.cmd("colorscheme gruvbox")
 
+        local available_themes = {
+          "onedark",
+          "onelight",
+          "moonfly",
+          "cyberdream",
+          "tokyonight",
+          "gruvbox",
+          "wisteria",
+          "githubdark",
+        }
+
         vim.api.nvim_create_user_command("Theme", function(opts)
           local style = opts.args:lower()
 
-          if style == "onedark" or style == "onelight" then
+          if style == "list" then
+            vim.notify("Available themes: " .. table.concat(available_themes, ", "), vim.log.levels.INFO)
+            return
+          elseif style == "onedark" or style == "onelight" then
             require("onedark").setup({ style = style == "onelight" and "light" or "dark" })
             require("onedark").load()
           elseif style == "moonfly" then
@@ -161,13 +176,20 @@ function M.setup()
           elseif style == "gruvbox" then
             require("gruvbox").setup({})
             vim.cmd("colorscheme gruvbox")
+          elseif style == "wisteria" then
+            vim.cmd("colorscheme wisteria")
           elseif style == "githubdark" or style == "github-dark" then
             require("github-theme").setup({ options = { darken = { floats = false } } })
             vim.cmd("colorscheme github_dark")
           else
-            vim.notify("Invalid theme", vim.log.levels.ERROR)
+            vim.notify("Invalid theme. Use :Theme list", vim.log.levels.ERROR)
           end
-        end, { nargs = 1 })
+        end, {
+          nargs = 1,
+          complete = function()
+            return { "list", "onedark", "onelight", "moonfly", "cyberdream", "tokyonight", "gruvbox", "wisteria", "githubdark", "github-dark" }
+          end,
+        })
       end
     },
 
