@@ -60,25 +60,54 @@ local function open_path_in_system(path)
   end
 
   local expanded = vim.fn.fnamemodify(vim.fn.expand(path), ":p")
-
-  if vim.ui and vim.ui.open then
-    local ok, cmd_or_nil, err_or_nil = pcall(vim.ui.open, expanded)
-    if ok and cmd_or_nil then
-      return
-    end
-    if ok and err_or_nil then
-      vim.notify("System open failed: " .. tostring(err_or_nil), vim.log.levels.WARN)
-    elseif not ok then
-      vim.notify("System open failed: " .. tostring(cmd_or_nil), vim.log.levels.WARN)
-    end
+  if vim.uv.fs_stat(expanded) == nil then
+    vim.notify("Path does not exist: " .. expanded, vim.log.levels.WARN)
+    return
   end
 
   local sys = vim.loop.os_uname().sysname
+  local is_windows = (sys == "Windows_NT" or sys:match("Windows"))
+
+  -- vim.ui.open can silently no-op on some Windows environments.
+  -- Keep it for macOS/Linux, but use explicit OS commands on Windows.
+  if (not is_windows) and vim.ui and vim.ui.open then
+    local ok, result_or_nil, err_or_nil = pcall(vim.ui.open, expanded)
+    if ok and result_or_nil then
+      return
+    end
+    if ok and err_or_nil then
+      vim.notify("vim.ui.open failed: " .. tostring(err_or_nil), vim.log.levels.WARN)
+    elseif not ok then
+      vim.notify("vim.ui.open failed unexpectedly", vim.log.levels.WARN)
+    end
+  end
+
   local cmd = nil
   if sys == "Darwin" then
     cmd = { "open", expanded }
-  elseif sys == "Windows_NT" or sys:match("Windows") then
-    cmd = { "cmd", "/c", "start", "", expanded }
+  elseif is_windows then
+    local win_path = expanded:gsub("/", "\\")
+    -- cmd /c start is the most reliable way to open files/folders on Windows.
+    -- Passing as an array avoids shell quoting issues with spaces.
+    -- The empty string "" is required as the window title placeholder.
+    local jid = vim.fn.jobstart({ "cmd.exe", "/c", "start", "", win_path }, { detach = true })
+    if jid > 0 then
+      return
+    end
+    -- Fallback: explicit explorer.exe
+    jid = vim.fn.jobstart({ "explorer.exe", win_path }, { detach = true })
+    if jid > 0 then
+      return
+    end
+    -- Last resort: PowerShell Start-Process
+    cmd = {
+      "powershell.exe",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "Start-Process -LiteralPath '" .. win_path:gsub("'", "''") .. "'",
+    }
   else
     cmd = { "xdg-open", expanded }
   end
@@ -95,11 +124,32 @@ local function detect_open_target(arg)
   end
 
   if vim.bo.filetype == "NvimTree" then
+    local node = nil
+
     local ok, api = pcall(require, "nvim-tree.api")
     if ok and api and api.tree and api.tree.get_node_under_cursor then
-      local node = api.tree.get_node_under_cursor()
-      if node then
-        return node.absolute_path or node.link_to or node.name
+      node = api.tree.get_node_under_cursor()
+    end
+
+    if not node then
+      local ok_lib, lib = pcall(require, "nvim-tree.lib")
+      if ok_lib and lib and lib.get_node_at_cursor then
+        node = lib.get_node_at_cursor()
+      end
+    end
+
+    if node then
+      if node.absolute_path and node.absolute_path ~= "" then
+        return node.absolute_path
+      end
+      if node.link_to and node.link_to ~= "" then
+        return node.link_to
+      end
+      if node.name and node.name ~= "" and node.parent and node.parent.absolute_path then
+        return node.parent.absolute_path .. "/" .. node.name
+      end
+      if node.name and node.name ~= "" then
+        return node.name
       end
     end
   end
