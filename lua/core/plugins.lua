@@ -193,6 +193,18 @@ function M.setup()
       end
     },
 
+    {
+      "vyfor/cord.nvim",
+      build = ":Cord update fetch",
+      event = "VeryLazy",
+      opts = {
+        editor = { tooltip = "Nvlobiani" },
+        display = {
+          theme = "default",
+        },
+      },
+    },
+
     -- =========================
     -- Navigation & Files
     -- =========================
