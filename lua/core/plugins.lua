@@ -198,9 +198,14 @@ function M.setup()
       build = ":Cord update fetch",
       event = "VeryLazy",
       opts = {
-        editor = { tooltip = "Nvlobiani" },
+        editor = {
+          tooltip = "Nvlobiani",
+          name = "Nvlobiani",
+          client = "1507059926076358686",
+          icon = "nvlobiani",
+        },
         display = {
-          theme = "default",
+          swap_icons = true,
         },
       },
     },
