@@ -129,8 +129,19 @@ function M.setup()
     return string.format('"%s" %s', tmux_bin, args)
   end
 
+  local function tmux_session_name()
+    local cwd = vim.uv.cwd() or vim.fn.getcwd()
+    local base = vim.fn.fnamemodify(cwd, ":t")
+    if base == "" then
+      base = "root"
+    end
+    local sanitized = base:gsub("[^%w_%-]", "_")
+    return "nvlobiani-" .. sanitized
+  end
+
   local function ensure_tmux_terminal()
-    local start_cmd = tmux_command("new-session -A -s nvlobiani-popup")
+    local session = tmux_session_name()
+    local start_cmd = tmux_command("new-session -A -s " .. session)
     if not start_cmd then
       return nil
     end
